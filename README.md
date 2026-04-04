@@ -1,3 +1,11 @@
+## v1.0.4 – 2026-04-04
+### Neu
+- Light/Dark Mode Toggle (oben rechts, neben Abmelden)
+- Standard: Light Mode — gespeicherte Wahl bleibt über Sessions
+- Build-Nummer v1.0.4 unten links auf allen Seiten (Login, Angebot, Bestätigung)
+
+---
+
 ## v1.0.3 – 2026-04-04
 ### Behoben
 - Finanzierungswerte wurden nicht aus dem PDF übernommen (standen auf 0,00 €)
