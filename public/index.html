@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>von Busch - Sales Offer Self Service</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ac:#00C2FF;--err:#dc2626;--ok:#16a34a;--tx:#1a1a2e;--tx2:#4a4a6a;--tx3:#8a8aaa;--bd:#e2e8f0;--bg:#f8fafc;--sf:#ffffff;--sf2:#f1f5f9}
+[data-theme=dark]{--tx:#e8eaf0;--tx2:#9a9ab8;--tx3:#5a5a7a;--bd:#2a2a3e;--bg:#111120;--sf:#1a1a2e;--sf2:#22223a}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s}
+.wrap{max-width:960px;margin:0 auto;padding:24px 16px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.inp{width:100%;padding:10px 14px;border:1.5px solid var(--bd);border-radius:9px;font-size:15px;font-family:inherit;outline:none;transition:border-color .15s;background:var(--sf);color:var(--tx)}
+.inp:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(0,194,255,.12)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;background:var(--ac);color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s;text-decoration:none}
+.btn:hover{opacity:.9}.btn-ok{background:var(--ok)}.btn-sec{background:var(--sf);color:var(--tx);border:1.5px solid var(--bd)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{margin-bottom:16px}.label{display:block;font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:5px}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge-blue{background:rgba(0,194,255,.12);color:#0077aa}
+.err-box{background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);border-radius:9px;padding:12px 16px;color:var(--err);font-size:14px;margin-bottom:16px}
+.tab-bar{display:flex;gap:0;border-bottom:2px solid var(--bd);margin-bottom:20px}
+.tab-btn{padding:10px 18px;background:none;border:none;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;color:var(--tx2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s}
+.tab-btn.active{color:var(--ac);border-bottom-color:var(--ac)}
+.fin-card{border:2px solid var(--bd);border-radius:12px;padding:18px;cursor:pointer;transition:border-color .2s,background .2s;position:relative;display:block}
+.fin-card:hover{border-color:var(--ac)}.fin-card.selected{border-color:var(--ac);background:rgba(0,194,255,.05)}
+.fin-card input{position:absolute;opacity:0;width:0;height:0}
+.fin-title{font-weight:700;font-size:15px;margin-bottom:4px}
+.fin-sub{font-size:13px;color:var(--tx2)}.fin-price{font-size:20px;font-weight:700;color:var(--ac);margin-top:8px}
+#sig-canvas{border:2px dashed var(--bd);border-radius:10px;cursor:crosshair;touch-action:none;display:block;width:100%;background:#fff}
+#sig-canvas.signed{border-color:var(--ac);border-style:solid}
+h1{font-size:22px;font-weight:700;margin-bottom:8px}h2{font-size:17px;font-weight:600;margin-bottom:14px}
+h3{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em}
+.step{display:flex;align-items:center;gap:12px;padding:8px 0}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--ac);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ref-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.theme-toggle{background:none;border:1.5px solid var(--bd);border-radius:20px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--tx2);font-family:inherit}
+.theme-toggle:hover{border-color:var(--ac);color:var(--ac)}
+.logo-dark{display:block}.logo-light{display:none}
+[data-theme=dark] .logo-dark{display:none}[data-theme=dark] .logo-light{display:block}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}.ref-grid{grid-template-columns:1fr 1fr}}
+
+/* VIEWS */
+.view{display:none}.view.active{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px">
+    <div>
+      <a href="/" style="display:block;line-height:0;margin-bottom:4px">
+        <span class="logo-dark"><svg style="height:32px;width:auto;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 546.42 118.1"><path fill="#0d1a14" d="M513.89,50V163.78h10.49V133c0-11.59.91-25.67,15.33-25.67,12.19,0,13,9.39,13,19.87v36.56h10.48V125.29c0-15.18-3.93-28.15-21-28.15-7.6,0-13.24,3.45-17.56,9.66l-.26-.27V50Zm-20.58,53.67a32.06,32.06,0,0,0-19-6.49c-18.09,0-32.9,14.91-32.9,34.22,0,19.59,14.15,34.22,32.77,34.22,7.34,0,13.5-2.35,19.53-6.63V144.19h-.27c-5.11,7-11.27,11.18-20.05,11.18-12.84,0-21.23-11.18-21.23-24s9-24,21.76-24c8.25,0,14.28,4.42,19.13,10.9h.26ZM425,109.15c-2.75-6.76-9.31-12-16.39-12a18,18,0,0,0-18.35,18.36c0,20.41,27.79,15.45,27.79,29.93a9.6,9.6,0,0,1-10,9.94c-6.95,0-10-4.28-12.58-10.35l-9.31,4.14c3.28,10.21,11.4,16.42,21.76,16.42a20.66,20.66,0,0,0,20.84-21.11c0-10.9-7.08-15.46-14.29-18.63s-14.28-5.38-14.28-11.31c0-4.14,3.93-7.18,7.6-7.18s6.94,3.18,8.39,6.63ZM330,98.94H319.52v37.39c0,17.24,6.16,29.25,24.38,29.25s24.38-12,24.38-29.25V98.94H357.79v36.14c0,10.9-1.18,20.29-13.89,20.29S330,146,330,135.08ZM252.94,70.52h4.32c13.5,0,22.94,1.65,22.94,17.38,0,16.14-10.62,17.66-23.07,17.66h-4.19Zm-11,93.26h22.93c19.53,0,35.39-8.28,35.39-29,0-12.42-6.94-23.59-18.74-26.63,6.68-4.69,9.7-11.86,9.7-20.28,0-21.25-15.07-28.14-33-28.14H241.93Zm11-48.28h9.57c12.05,0,26.73,2.34,26.73,18.48,0,15.87-13,19-25.29,19h-11ZM179.28,98.94H168.79v64.84h10.49V133c0-11.59.92-25.67,15.33-25.67,12.19,0,13,9.39,13,19.87v36.56h10.48V125.29c0-15.18-3.93-28.15-21-28.15-7.6,0-13.24,3.45-17.56,9.66h-.26Zm-61.21,8.41c13,0,21.89,10.9,21.89,24s-8.91,24-21.89,24-21.89-10.77-21.89-24,8.91-24,21.89-24m0,58.23c18,0,32.37-15,32.37-34.08s-14.28-34.36-32.37-34.36S85.7,112.46,85.7,131.5s14.41,34.08,32.37,34.08M28.68,98.94H16.75L47,168.06,77.18,98.94H65.38L47,142.54Z" transform="translate(-16.75 -49.96)"/></svg></span>
+        <span class="logo-light"><svg style="height:32px;width:auto;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 546.42 118.1"><path fill="#ffffff" d="M513.89,50V163.78h10.49V133c0-11.59.91-25.67,15.33-25.67,12.19,0,13,9.39,13,19.87v36.56h10.48V125.29c0-15.18-3.93-28.15-21-28.15-7.6,0-13.24,3.45-17.56,9.66l-.26-.27V50Zm-20.58,53.67a32.06,32.06,0,0,0-19-6.49c-18.09,0-32.9,14.91-32.9,34.22,0,19.59,14.15,34.22,32.77,34.22,7.34,0,13.5-2.35,19.53-6.63V144.19h-.27c-5.11,7-11.27,11.18-20.05,11.18-12.84,0-21.23-11.18-21.23-24s9-24,21.76-24c8.25,0,14.28,4.42,19.13,10.9h.26ZM425,109.15c-2.75-6.76-9.31-12-16.39-12a18,18,0,0,0-18.35,18.36c0,20.41,27.79,15.45,27.79,29.93a9.6,9.6,0,0,1-10,9.94c-6.95,0-10-4.28-12.58-10.35l-9.31,4.14c3.28,10.21,11.4,16.42,21.76,16.42a20.66,20.66,0,0,0,20.84-21.11c0-10.9-7.08-15.46-14.29-18.63s-14.28-5.38-14.28-11.31c0-4.14,3.93-7.18,7.6-7.18s6.94,3.18,8.39,6.63ZM330,98.94H319.52v37.39c0,17.24,6.16,29.25,24.38,29.25s24.38-12,24.38-29.25V98.94H357.79v36.14c0,10.9-1.18,20.29-13.89,20.29S330,146,330,135.08ZM252.94,70.52h4.32c13.5,0,22.94,1.65,22.94,17.38,0,16.14-10.62,17.66-23.07,17.66h-4.19Zm-11,93.26h22.93c19.53,0,35.39-8.28,35.39-29,0-12.42-6.94-23.59-18.74-26.63,6.68-4.69,9.7-11.86,9.7-20.28,0-21.25-15.07-28.14-33-28.14H241.93Zm11-48.28h9.57c12.05,0,26.73,2.34,26.73,18.48,0,15.87-13,19-25.29,19h-11ZM179.28,98.94H168.79v64.84h10.49V133c0-11.59.92-25.67,15.33-25.67,12.19,0,13,9.39,13,19.87v36.56h10.48V125.29c0-15.18-3.93-28.15-21-28.15-7.6,0-13.24,3.45-17.56,9.66h-.26Zm-61.21,8.41c13,0,21.89,10.9,21.89,24s-8.91,24-21.89,24-21.89-10.77-21.89-24,8.91-24,21.89-24m0,58.23c18,0,32.37-15,32.37-34.08s-14.28-34.36-32.37-34.36S85.7,112.46,85.7,131.5s14.41,34.08,32.37,34.08M28.68,98.94H16.75L47,168.06,77.18,98.94H65.38L47,142.54Z" transform="translate(-16.75 -49.96)"/></svg></span>
+      </a>
+      <div style="font-size:13px;color:var(--tx2)">Sales Offer Self Service</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+      <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">&#9728; Hell</button>
+      <a id="logout-btn" href="/api/auth/logout" style="display:none;font-size:13px;color:var(--tx2);text-decoration:none">Abmelden</a>
+    </div>
+  </div>
+
+  <!-- VIEW: LOGIN -->
+  <div class="view active" id="v-login">
+    <div style="max-width:420px;margin:40px auto">
+      <h1>Ihr Angebot</h1>
+      <p style="color:var(--tx2);margin-bottom:24px;font-size:14px">Bitte geben Sie Ihre Kundennummer und die Angebotsnummer ein.</p>
+      <div id="login-err" class="err-box" style="display:none"></div>
+      <div class="card" style="padding:24px">
+        <div class="field">
+          <label class="label" for="erp_id">Ihre Kundennummer</label>
+          <input class="inp" id="erp_id" type="text" placeholder="z.B. 10060" autocomplete="off">
+        </div>
+        <div class="field" style="margin-bottom:20px">
+          <label class="label" for="offer_nr">Angebotsnummer</label>
+          <input class="inp" id="offer_nr" type="text" placeholder="z.B. 413251" autocomplete="off">
+          <div style="font-size:12px;color:var(--tx2);margin-top:4px">Ohne den Suffix nach dem Bindestrich.</div>
+        </div>
+        <button class="btn" onclick="doLogin()" style="width:100%">Angebot anzeigen &rarr;</button>
+      </div>
+      <p style="font-size:12px;color:var(--tx2);text-align:center;margin-top:16px">Bei Fragen: <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a></p>
+    </div>
+  </div>
+
+  <!-- VIEW: ANGEBOT -->
+  <div class="view" id="v-angebot">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <h1 style="margin:0">Ihr Angebot</h1>
+    </div>
+
+    <!-- Kundendaten -->
+    <div class="card">
+      <h3>Angebot f&uuml;r</h3>
+      <div class="grid2">
+        <div>
+          <div class="field"><span class="label">Firma</span><span id="d-firma" style="font-weight:600"></span></div>
+          <div class="field"><span class="label">Ansprechpartner</span><span id="d-kontakt"></span></div>
+          <div class="field"><span class="label">E-Mail</span><span id="d-email"></span></div>
+          <div class="field"><span class="label">Datum</span><span id="d-datum"></span></div>
+        </div>
+        <div>
+          <div class="field"><span class="label">Adresse</span><span id="d-adresse"></span></div>
+          <div class="field"><span class="label">Kundennummer</span><span id="d-kundennr"></span></div>
+          <div class="field"><span class="label">Angebotsnummer</span><span id="d-angebotsnr"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PDF / Uebersicht -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="tab-bar" style="padding:0 24px;margin:0">
+        <button class="tab-btn active" onclick="showTab('overview',this)">&#128203; &Uuml;bersicht</button>
+        <button class="tab-btn" onclick="showTab('pdf',this)">&#128196; Angebot (PDF)</button>
+      </div>
+      <div id="tab-overview" style="padding:24px">
+        <h3>Angebotsinhalt</h3>
+        <div id="d-subject" style="font-size:14px;color:var(--tx2);margin-bottom:12px"></div>
+        <div id="d-summary" style="background:var(--sf2);border-radius:8px;padding:14px;font-size:13px;color:var(--tx2);margin-bottom:12px"></div>
+        <div id="d-tags"></div>
+      </div>
+      <div id="tab-pdf" style="display:none;padding:0">
+        <iframe id="pdf-frame" style="width:100%;height:680px;border:none;display:block" title="Angebot PDF"></iframe>
+      </div>
+    </div>
+
+    <!-- Finanzierung -->
+    <div class="card">
+      <h2>Finanzierungsart w&auml;hlen</h2>
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:20px">Bitte w&auml;hlen Sie, wie Sie das Angebot finanzieren m&ouml;chten:</p>
+      <div id="fin-options" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
+        <div style="color:var(--tx2);font-size:13px;padding:20px;text-align:center">&#9203; Wird geladen&hellip;</div>
+      </div>
+      <div id="ref-section" style="display:none">
+        <h3 style="margin-bottom:10px">Finanzierungspartner</h3>
+        <div id="ref-grid" class="ref-grid"></div>
+      </div>
+    </div>
+
+    <!-- Servicevertrag -->
+    <div class="card" id="sv-card">
+      <h2>Servicevertrag</h2>
+      <div id="sv-content"><div style="color:var(--tx2);font-size:13px">&#9203; Wird geladen&hellip;</div></div>
+    </div>
+
+    <!-- Unterschrift -->
+    <div class="card">
+      <h2>Digitale Unterschrift</h2>
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:16px">Mit Ihrer Unterschrift erteilen Sie verbindlich den Auftrag in der gew&auml;hlten Finanzierungsform. Eine Best&auml;tigung erhalten Sie per E-Mail.</p>
+      <div style="margin-bottom:12px">
+        <label class="label">Unterschrift (Maus oder Touch)</label>
+        <canvas id="sig-canvas" width="800" height="160"></canvas>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:20px">
+        <button class="btn-sec btn" onclick="clearSig()" style="font-size:13px;padding:8px 16px">L&ouml;schen</button>
+        <span id="sig-hint" style="font-size:13px;color:var(--tx2);align-self:center">Bitte unterschreiben Sie im Feld oben</span>
+      </div>
+      <div style="background:rgba(0,194,255,.06);border:1px solid rgba(0,194,255,.2);border-radius:9px;padding:14px;font-size:13px;margin-bottom:20px">
+        Mit dem Absenden best&auml;tige ich die <strong>verbindliche Beauftragung</strong> und stimme den <a href="https://vonbusch.digital/agb" target="_blank" style="color:var(--ac)">AGB der von Busch GmbH</a> zu.
+      </div>
+      <button class="btn btn-ok" onclick="submitOrder()" id="submit-btn" style="width:100%;font-size:16px;padding:14px">&#10003; Auftrag verbindlich erteilen</button>
+      <div id="submit-err" class="err-box" style="display:none;margin-top:12px"></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);padding:20px 0">
+      <span style="color:var(--tx3)">v1.0.7</span>
+      <span>von Busch GmbH &middot; <a href="https://vonbusch.digital" style="color:var(--ac)">vonbusch.digital</a> &middot; <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a></span>
+    </div>
+  </div>
+
+  <!-- VIEW: BESTAETIGUNG -->
+  <div class="view" id="v-bestaetigung">
+    <div style="max-width:560px;margin:40px auto;text-align:center">
+      <div style="font-size:64px;margin-bottom:20px">&#9989;</div>
+      <h1 style="color:var(--ok)">Auftrag erteilt!</h1>
+      <p style="font-size:16px;color:var(--tx2);margin:16px 0 24px">Vielen Dank f&uuml;r Ihren Auftrag. Wir haben Ihre Bestellung erhalten und werden uns umgehend bei Ihnen melden.</p>
+      <div class="card" style="text-align:left">
+        <div class="step"><div class="step-num">1</div><div><strong>Auftragsbes&auml;tigung per Mail</strong><br><span style="font-size:13px;color:var(--tx2)">Sie erhalten in K&uuml;rze eine Best&auml;tigungsmail mit allen Details.</span></div></div>
+        <div class="step"><div class="step-num">2</div><div><strong>Bonit&auml;tspr&uuml;fung</strong><br><span style="font-size:13px;color:var(--tx2)">Unser Team f&uuml;hrt im Hintergrund eine Bonit&auml;tspr&uuml;fung durch.</span></div></div>
+        <div class="step"><div class="step-num">3</div><div><strong>Auftragsbearbeitung</strong><br><span style="font-size:13px;color:var(--tx2)">Nach Freigabe beginnen wir umgehend mit der Auftragsbearbeitung.</span></div></div>
+        <div class="step"><div class="step-num">4</div><div><strong>Ihr Ansprechpartner meldet sich</strong><br><span style="font-size:13px;color:var(--tx2)">Ihr Sales Manager bei von Busch nimmt pers&ouml;nlich Kontakt auf.</span></div></div>
+      </div>
+      <p style="font-size:13px;color:var(--tx2);margin-top:20px">
+        Referenznummer: <strong id="ref-nr"></strong><br>
+        Bei Fragen: <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a>
+      </p>
+      <div style="display:flex;justify-content:space-between;margin-top:24px;font-size:12px;color:var(--tx3)">
+        <span>v1.0.7</span>
+        <a href="/" style="color:var(--ac)">Zur&uuml;ck zur Startseite</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// Theme
+(function(){
+  var t = localStorage.getItem('soss_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  var b = document.getElementById('theme-btn');
+  if (b) b.textContent = t === 'dark' ? '\u2600 Hell' : '\uD83C\uDF19 Dunkel';
+})();
+
+function toggleTheme() {
+  var cur = document.documentElement.getAttribute('data-theme');
+  var next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('soss_theme', next);
+  var b = document.getElementById('theme-btn');
+  if (b) b.textContent = next === 'dark' ? '\u2600 Hell' : '\uD83C\uDF19 Dunkel';
+}
+
+// State
+var SID = null;
+var _fin = null;
+var _session = null;
+
+// Views
+function showView(id) {
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.getElementById('v-' + id).classList.add('active');
+}
+
+// Tabs
+function showTab(id, btn) {
+  document.getElementById('tab-overview').style.display = 'none';
+  document.getElementById('tab-pdf').style.display = 'none';
+  document.getElementById('tab-' + id).style.display = 'block';
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+// Euros
+function fEu(n) {
+  if (!n && n !== 0) return '-';
+  return new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR'}).format(n);
+}
+
+// Login
+async function doLogin() {
+  var erpId = document.getElementById('erp_id').value.trim();
+  var offerNr = document.getElementById('offer_nr').value.trim();
+  var errEl = document.getElementById('login-err');
+  errEl.style.display = 'none';
+
+  if (!erpId || !offerNr) {
+    errEl.textContent = 'Bitte beide Felder ausf\u00fcllen.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  var fd = new FormData();
+  fd.append('erp_id', erpId);
+  fd.append('offer_nr', offerNr);
+
+  var res = await fetch('/api/auth/login', {method:'POST', body: fd});
+  var data = await res.json();
+
+  if (data.error) {
+    var msgs = {
+      notfound: 'Kundennummer oder Angebotsnummer nicht gefunden.',
+      used: 'Dieses Angebot wurde bereits beauftragt.'
+    };
+    errEl.textContent = msgs[data.error] || data.error;
+    errEl.style.display = 'block';
+    return;
+  }
+
+  SID = data.session_id;
+  _session = data;
+  document.getElementById('logout-btn').style.display = '';
+  fillAngebot(data);
+  loadFinancials();
+  showView('angebot');
+}
+
+function fillAngebot(d) {
+  document.getElementById('d-firma').textContent = d.firma || '-';
+  document.getElementById('d-kontakt').textContent = d.kontakt || '-';
+  document.getElementById('d-email').textContent = d.email || '-';
+  document.getElementById('d-adresse').textContent = d.adresse || '-';
+  document.getElementById('d-kundennr').textContent = d.erp_id || '-';
+  document.getElementById('d-angebotsnr').textContent = d.offer_number || '-';
+  document.getElementById('d-datum').textContent = new Date().toLocaleDateString('de-DE', {day:'2-digit', month:'long', year:'numeric'});
+  document.getElementById('d-subject').textContent = d.subject || '';
+  document.getElementById('d-summary').textContent = d.summary || '';
+
+  var tagsEl = document.getElementById('d-tags');
+  tagsEl.innerHTML = '';
+  var tags = [];
+  try { tags = JSON.parse(d.tags || '[]'); } catch(e) {}
+  tags.forEach(function(t) {
+    var s = document.createElement('span');
+    s.className = 'badge badge-blue';
+    s.style.marginRight = '4px';
+    s.textContent = t;
+    tagsEl.appendChild(s);
+  });
+
+  document.getElementById('pdf-frame').src = '/api/offer/pdf?sid=' + SID;
+}
+
+async function loadFinancials() {
+  var res = await fetch('/api/offer/financials?sid=' + SID);
+  _fin = await res.json();
+  renderFinOptions();
+  renderServicevertrag();
+}
+
+function renderFinOptions() {
+  var opts = document.getElementById('fin-options');
+  opts.innerHTML = '';
+  var types = (_fin && _fin.financingTypes) ? _fin.financingTypes : ['kauf','miete','leasing'];
+  var monate = (_fin && _fin.contractMonths) ? _fin.contractMonths : 36;
+  var billing = (_fin && _fin.billingCycle) ? ' - ' + _fin.billingCycle : '';
+  var leasingRate = (_fin && _fin.monthlyRate) ? _fin.monthlyRate * 0.92 : 0;
+
+  var defs = {
+    kauf: {
+      icon: '\uD83D\uDCB3', label: 'Kauf', sub: 'Einmalige Zahlung',
+      price: (_fin && _fin.totalValue) ? fEu(_fin.totalValue) : '&#8211; auf Anfrage &#8211;'
+    },
+    miete: {
+      icon: '\uD83D\uDCC5', label: 'Miete',
+      sub: monate + ' Monate Laufzeit' + billing,
+      price: (_fin && _fin.monthlyRate) ? fEu(_fin.monthlyRate) + '/Monat' : '&#8211; auf Anfrage &#8211;'
+    },
+    leasing: {
+      icon: '\uD83D\uDD11', label: 'Leasing',
+      sub: monate + ' Monate Laufzeit',
+      price: leasingRate ? fEu(leasingRate) + '/Monat' : '&#8211; auf Anfrage &#8211;'
+    }
+  };
+
+  types.forEach(function(type) {
+    var d = defs[type];
+    if (!d) return;
+    var lbl = document.createElement('label');
+    lbl.className = 'fin-card';
+    lbl.id = 'card-' + type;
+    var inp = document.createElement('input');
+    inp.type = 'radio'; inp.name = 'fin_type'; inp.value = type;
+    inp.addEventListener('change', function() { selectFin(type); });
+    lbl.appendChild(inp);
+    var title = document.createElement('div');
+    title.className = 'fin-title';
+    title.textContent = d.icon + ' ' + d.label;
+    lbl.appendChild(title);
+    var sub = document.createElement('div');
+    sub.className = 'fin-sub';
+    sub.textContent = d.sub;
+    lbl.appendChild(sub);
+    var price = document.createElement('div');
+    price.className = 'fin-price';
+    price.innerHTML = d.price;
+    lbl.appendChild(price);
+    var note = document.createElement('div');
+    note.style.cssText = 'font-size:12px;color:var(--tx2);margin-top:4px';
+    note.textContent = 'Netto zzgl. MwSt.';
+    lbl.appendChild(note);
+    opts.appendChild(lbl);
+  });
+}
+
+function renderServicevertrag() {
+  var el = document.getElementById('sv-content');
+  var monate = (_fin && _fin.contractMonths) ? _fin.contractMonths : 36;
+  var hasSv = _fin && _fin.hasServiceContract;
+
+  if (hasSv) {
+    el.innerHTML = '<div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px">'
+      + '\u2705 <strong>Servicevertrag im Angebot enthalten</strong><br>'
+      + '<span style="color:var(--tx2)">Umfasst Wartung, Support und Betrieb gem\u00e4\u00df Angebot. Laufzeit: ' + monate + ' Monate.</span></div>'
+      + '<label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">'
+      + '<input type="checkbox" id="service-included" checked style="margin-top:3px;width:18px;height:18px;accent-color:var(--ac)">'
+      + '<div><div style="font-weight:600;margin-bottom:3px">Servicevertrag einschlie\u00dfen</div>'
+      + '<div style="font-size:13px;color:var(--tx2)">Ist Bestandteil des Angebots und wird mit beauftragt.</div></div></label>';
+  } else {
+    el.innerHTML = '<div style="background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin-bottom:14px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center">'
+      + '<span style="font-size:13px;color:var(--tx2)">Servicevertrag</span>'
+      + '<span style="font-weight:700;color:var(--tx3)">&ndash;,&ndash; &euro;</span></div>'
+      + '<div style="font-size:12px;color:var(--tx3);margin-top:4px">Kein Servicevertrag im Angebot enthalten</div></div>'
+      + '<label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:14px;background:rgba(0,194,255,.04);border:1.5px dashed var(--ac);border-radius:10px">'
+      + '<input type="checkbox" id="service-included" style="margin-top:3px;width:18px;height:18px;accent-color:var(--ac);flex-shrink:0">'
+      + '<div><div style="font-weight:600;margin-bottom:3px;color:var(--tx)">Servicevertrag hinzuf\u00fcgen?</div>'
+      + '<div style="font-size:13px;color:var(--tx2)">Setzen Sie diesen Haken, wenn Sie Interesse an einem Servicevertrag haben. '
+      + 'Ihr zust\u00e4ndiger von Busch Mitarbeiter meldet sich bei Ihnen.</div></div></label>';
+  }
+}
+
+function selectFin(type) {
+  document.querySelectorAll('.fin-card').forEach(function(c) { c.classList.remove('selected'); });
+  var card = document.getElementById('card-' + type);
+  if (card) card.classList.add('selected');
+  var showRef = type === 'miete' || type === 'leasing';
+  document.getElementById('ref-section').style.display = showRef ? 'block' : 'none';
+  if (showRef && !document.getElementById('ref-grid').children.length) buildRefGrid();
+}
+
+function buildRefGrid() {
+  var grid = document.getElementById('ref-grid');
+  grid.innerHTML = '';
+  ['BFL','DLL','GRENKE','MLF (Mercator)','von Busch'].forEach(function(r) {
+    var lbl = document.createElement('label');
+    lbl.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px solid var(--bd);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600';
+    var inp = document.createElement('input');
+    inp.type = 'radio'; inp.name = 'refinanzierer'; inp.value = r;
+    lbl.appendChild(inp);
+    lbl.appendChild(document.createTextNode(r));
+    grid.appendChild(lbl);
+  });
+}
+
+// Signature
+var drawing = false, hasSig = false;
+var canvas, ctx;
+
+function initCanvas() {
+  canvas = document.getElementById('sig-canvas');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  canvas.addEventListener('mousedown', function(e) {
+    drawing = true;
+    var p = getPos(e);
+    ctx.beginPath(); ctx.moveTo(p.x, p.y);
+  });
+  canvas.addEventListener('mousemove', function(e) {
+    if (!drawing) return;
+    var p = getPos(e);
+    ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineTo(p.x, p.y); ctx.stroke();
+    hasSig = true; canvas.classList.add('signed');
+    document.getElementById('sig-hint').textContent = 'Unterschrift gesetzt \u2713';
+  });
+  canvas.addEventListener('mouseup', function() { drawing = false; });
+  canvas.addEventListener('mouseleave', function() { drawing = false; });
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault(); drawing = true;
+    var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y);
+  }, {passive:false});
+  canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault(); if (!drawing) return;
+    var p = getPos(e);
+    ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineTo(p.x, p.y); ctx.stroke();
+    hasSig = true; canvas.classList.add('signed');
+    document.getElementById('sig-hint').textContent = 'Unterschrift gesetzt \u2713';
+  }, {passive:false});
+  canvas.addEventListener('touchend', function() { drawing = false; });
+}
+
+function resizeCanvas() {
+  if (!canvas) return;
+  var rect = canvas.parentElement.getBoundingClientRect();
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = 160 * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = '160px';
+  ctx.scale(dpr, dpr);
+}
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var src = (e.touches && e.touches[0]) ? e.touches[0] : e;
+  return {x: src.clientX - rect.left, y: src.clientY - rect.top};
+}
+
+function clearSig() {
+  var dpr = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  hasSig = false; canvas.classList.remove('signed');
+  document.getElementById('sig-hint').textContent = 'Bitte unterschreiben Sie im Feld oben';
+}
+
+// Submit
+async function submitOrder() {
+  var finType = document.querySelector('input[name=fin_type]:checked');
+  if (!finType) { alert('Bitte w\u00e4hlen Sie eine Finanzierungsart.'); return; }
+  finType = finType.value;
+
+  var needsRef = finType === 'miete' || finType === 'leasing';
+  var ref = needsRef ? document.querySelector('input[name=refinanzierer]:checked') : null;
+  if (needsRef && !ref) { alert('Bitte w\u00e4hlen Sie einen Finanzierungspartner.'); return; }
+
+  if (!hasSig) { alert('Bitte unterschreiben Sie das Angebot.'); return; }
+
+  var btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = '\u23f3 Wird \u00fcbertragen\u2026';
+
+  var svEl = document.getElementById('service-included');
+  var svChecked = svEl ? svEl.checked : false;
+  var hasSvInOffer = _fin && _fin.hasServiceContract;
+
+  var payload = {
+    session_id: SID,
+    financing_type: finType,
+    financing_partner: ref ? ref.value : 'von Busch',
+    service_included: (hasSvInOffer && svChecked) ? 1 : 0,
+    service_interest: (!hasSvInOffer && svChecked) ? 1 : 0,
+    monthly_rate: _fin ? _fin.monthlyRate : null,
+    total_value: _fin ? _fin.totalValue : null,
+    contract_months: _fin ? _fin.contractMonths : null,
+    signature_png: canvas.toDataURL('image/png')
+  };
+
+  try {
+    var res = await fetch('/api/order', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var data = await res.json();
+    if (data.success) {
+      document.getElementById('ref-nr').textContent = data.order_id.substring(0,8).toUpperCase();
+      showView('bestaetigung');
+    } else {
+      document.getElementById('submit-err').textContent = 'Fehler: ' + (data.error || 'Unbekannt');
+      document.getElementById('submit-err').style.display = 'block';
+      btn.disabled = false; btn.textContent = '\u2713 Auftrag verbindlich erteilen';
+    }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '\u2713 Auftrag verbindlich erteilen';
+    alert('Verbindungsfehler. Bitte versuchen Sie es erneut.');
+  }
+}
+
+// Init
+initCanvas();
+
+// Check if already logged in via session cookie
+fetch('/api/session/check').then(function(r) { return r.json(); }).then(function(d) {
+  if (d.valid) {
+    SID = d.session_id;
+    _session = d;
+    document.getElementById('logout-btn').style.display = '';
+    fillAngebot(d);
+    loadFinancials();
+    showView('angebot');
+  }
+}).catch(function() {});
+</script>
+</body>
+</html>

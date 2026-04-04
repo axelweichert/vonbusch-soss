@@ -1,3 +1,13 @@
+## v1.0.7 – 2026-04-04
+### Architektur-Umbau (Build-Fix Root Cause)
+- HTML aus TypeScript-Template-Literals herausgeloest -> keine verschachtelten Backticks mehr moeglich
+- Neue Struktur: public/index.html (statische Datei) + src/index.ts (nur noch API-Routes)
+- wrangler.toml: assets-Binding fuer Static Assets (public/ Ordner)
+- Worker hat nur noch sauberes TypeScript ohne eingebettetes HTML/JS
+- Alle bisherigen Features erhalten: Login, PDF, Finanzierungen, Servicevertrag, Signatur, CRM-Integration
+
+---
+
 ## v1.0.6 – 2026-04-04
 ### Behoben
 - Root-Ursache Build-Fehler behoben: Alle Backtick-Template-Literals im eingebetteten
