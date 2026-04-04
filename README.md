@@ -1,3 +1,13 @@
+## v1.1.0 - 2026-04-04
+### Behoben: Finanzierungswerte wurden nicht angezeigt
+- Root Cause: Regex traf nicht weil "84 Monate" zwischen "Preis/Monat" und "4.314,69 EUR" steht
+- Neue Extraktion: Sucht Preis/Monat mit bis zu 80 Zeichen Kontext dazwischen
+- Zusaetzlicher Fallback: Miete-Block, "X Monate ... Y,YY EUR" Pattern
+- fulltext_idx wird jetzt auch als Textquelle genutzt (Prio: R2 > fulltext_idx > summary)
+- D1: fulltext_idx fuer Nielsen Design Angebot 413251 mit Finanzdaten befuellt
+
+---
+
 ## v1.0.9 - 2026-04-04
 ### Verbessert: Finanzierungsoptionen
 - Miete + Leasing zu einer Karte "Finanzierung" zusammengefasst
