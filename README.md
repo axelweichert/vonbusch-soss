@@ -1,3 +1,12 @@
+## v1.0.8 - 2026-04-04
+### Behoben
+- Refinanzierer: Kein Kundenwahl mehr - wird intern von von Busch festgelegt
+  Hinweistext bei Miete/Leasing: "Finanzierungspartner wird nach Bonitaetspruefung mitgeteilt"
+- Rate Miete = Rate Leasing: Beide zeigen die Rate direkt aus dem Angebot (nicht 92% Faktor)
+- Login-Seite: Platzhalter zeigt jetzt 12345 / 654321 statt echter Kundendaten
+
+---
+
 ## v1.0.7 – 2026-04-04
 ### Architektur-Umbau (Build-Fix Root Cause)
 - HTML aus TypeScript-Template-Literals herausgeloest -> keine verschachtelten Backticks mehr moeglich

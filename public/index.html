@@ -72,11 +72,11 @@ h3{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transf
       <div class="card" style="padding:24px">
         <div class="field">
           <label class="label" for="erp_id">Ihre Kundennummer</label>
-          <input class="inp" id="erp_id" type="text" placeholder="z.B. 10060" autocomplete="off">
+          <input class="inp" id="erp_id" type="text" placeholder="z.B. 12345" autocomplete="off">
         </div>
         <div class="field" style="margin-bottom:20px">
           <label class="label" for="offer_nr">Angebotsnummer</label>
-          <input class="inp" id="offer_nr" type="text" placeholder="z.B. 413251" autocomplete="off">
+          <input class="inp" id="offer_nr" type="text" placeholder="z.B. 654321" autocomplete="off">
           <div style="font-size:12px;color:var(--tx2);margin-top:4px">Ohne den Suffix nach dem Bindestrich.</div>
         </div>
         <button class="btn" onclick="doLogin()" style="width:100%">Angebot anzeigen &rarr;</button>
@@ -133,9 +133,11 @@ h3{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transf
       <div id="fin-options" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
         <div style="color:var(--tx2);font-size:13px;padding:20px;text-align:center">&#9203; Wird geladen&hellip;</div>
       </div>
+      <!-- Refinanzierer wird intern von von Busch festgelegt, kein Kundenwahl -->
       <div id="ref-section" style="display:none">
-        <h3 style="margin-bottom:10px">Finanzierungspartner</h3>
-        <div id="ref-grid" class="ref-grid"></div>
+        <div style="background:rgba(0,194,255,.06);border:1px solid rgba(0,194,255,.2);border-radius:9px;padding:12px 14px;font-size:13px;color:var(--tx2)">
+          &#8505;&#65039; Der Finanzierungspartner wird von uns auf Basis Ihrer Bonit&#228;t und des Angebots festgelegt. Sie werden nach Auftragserteilung informiert.
+        </div>
       </div>
     </div>
 
@@ -165,7 +167,7 @@ h3{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transf
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);padding:20px 0">
-      <span style="color:var(--tx3)">v1.0.7</span>
+      <span style="color:var(--tx3)">v1.0.8</span>
       <span>von Busch GmbH &middot; <a href="https://vonbusch.digital" style="color:var(--ac)">vonbusch.digital</a> &middot; <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a></span>
     </div>
   </div>
@@ -187,7 +189,7 @@ h3{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transf
         Bei Fragen: <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a>
       </p>
       <div style="display:flex;justify-content:space-between;margin-top:24px;font-size:12px;color:var(--tx3)">
-        <span>v1.0.7</span>
+        <span>v1.0.8</span>
         <a href="/" style="color:var(--ac)">Zur&uuml;ck zur Startseite</a>
       </div>
     </div>
@@ -316,7 +318,7 @@ function renderFinOptions() {
   var types = (_fin && _fin.financingTypes) ? _fin.financingTypes : ['kauf','miete','leasing'];
   var monate = (_fin && _fin.contractMonths) ? _fin.contractMonths : 36;
   var billing = (_fin && _fin.billingCycle) ? ' - ' + _fin.billingCycle : '';
-  var leasingRate = (_fin && _fin.monthlyRate) ? _fin.monthlyRate * 0.92 : 0;
+  var leasingRate = (_fin && _fin.monthlyRate) ? _fin.monthlyRate : 0;
 
   var defs = {
     kauf: {
@@ -330,7 +332,7 @@ function renderFinOptions() {
     },
     leasing: {
       icon: '\uD83D\uDD11', label: 'Leasing',
-      sub: monate + ' Monate Laufzeit',
+      sub: monate + ' Monate Laufzeit' + billing,
       price: leasingRate ? fEu(leasingRate) + '/Monat' : '&#8211; auf Anfrage &#8211;'
     }
   };
@@ -396,28 +398,11 @@ function selectFin(type) {
   document.querySelectorAll('.fin-card').forEach(function(c) { c.classList.remove('selected'); });
   var card = document.getElementById('card-' + type);
   if (card) card.classList.add('selected');
-  var showRef = type === 'miete' || type === 'leasing';
-  document.getElementById('ref-section').style.display = showRef ? 'block' : 'none';
-  if (showRef && !document.getElementById('ref-grid').children.length) buildRefGrid();
+  var ref = document.getElementById('ref-section');
+  if (ref) ref.style.display = (type === 'miete' || type === 'leasing') ? 'block' : 'none';
 }
 
-function buildRefGrid() {
-  var grid = document.getElementById('ref-grid');
-  grid.innerHTML = '';
-  ['BFL','DLL','GRENKE','MLF (Mercator)','von Busch'].forEach(function(r) {
-    var lbl = document.createElement('label');
-    lbl.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px solid var(--bd);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600';
-    var inp = document.createElement('input');
-    inp.type = 'radio'; inp.name = 'refinanzierer'; inp.value = r;
-    lbl.appendChild(inp);
-    lbl.appendChild(document.createTextNode(r));
-    grid.appendChild(lbl);
-  });
-}
 
-// Signature
-var drawing = false, hasSig = false;
-var canvas, ctx;
 
 function initCanvas() {
   canvas = document.getElementById('sig-canvas');
@@ -486,8 +471,7 @@ async function submitOrder() {
   finType = finType.value;
 
   var needsRef = finType === 'miete' || finType === 'leasing';
-  var ref = needsRef ? document.querySelector('input[name=refinanzierer]:checked') : null;
-  if (needsRef && !ref) { alert('Bitte w\u00e4hlen Sie einen Finanzierungspartner.'); return; }
+  // Refinanzierer wird intern von von Busch festgelegt - keine Kundenwahl
 
   if (!hasSig) { alert('Bitte unterschreiben Sie das Angebot.'); return; }
 
@@ -501,7 +485,7 @@ async function submitOrder() {
   var payload = {
     session_id: SID,
     financing_type: finType,
-    financing_partner: ref ? ref.value : 'von Busch',
+    financing_partner: 'von Busch',
     service_included: (hasSvInOffer && svChecked) ? 1 : 0,
     service_interest: (!hasSvInOffer && svChecked) ? 1 : 0,
     monthly_rate: _fin ? _fin.monthlyRate : null,
