@@ -1,3 +1,32 @@
+## v1.1.4 - 2026-04-04
+### Neu: Bestelldokument als PDF (statt HTML)
+- Verwendet pdf-lib (rein JavaScript, laeuft nativ in Cloudflare Workers)
+- DIN-A4 PDF mit professionellem vonBusch-Layout
+- Echtes vonBusch Logo (PNG) eingebettet oben links
+- Inhalte: Auftraggeber, Auftragsdetails, Rate/Laufzeit/Servicevertrag
+- Digitale Unterschrift als eingebettetes PNG-Bild
+- Bestaetigungsstempel "Verbindliche Beauftragung"
+- Rechtlicher Hinweis (GoBD, Paragraph 147 AO)
+- Footer mit von Busch Adressdaten und Dokument-ID
+- Gespeichert in vonbusch-crm-archiv als .pdf (unveraenderlich, Bucket Lock)
+- Endpoint: GET /api/bestellung/{orderId} liefert PDF direkt aus Archiv
+
+---
+
+## v1.1.3 - 2026-04-04
+### Neu: Bestelldokument (HTML, revisionssicher archiviert)
+- Bei jeder Auftragserteilung wird automatisch ein HTML-Bestelldokument erstellt
+- Inhalt: Firmendaten, Angebotsnummer, Finanzierungsdetails, Servicevertrag, Datum
+- Digitale Unterschrift wird direkt eingebettet (als base64-PNG)
+- Gespeichert in vonbusch-crm-archiv (Bucket Lock: unveraenderlich)
+  Pfad: bestellungen/YYYY/MM/{orderId}-bestellung.html
+- Als Dokument im CRM registriert (doc_type: Bestellung, is_archived: 1)
+- Neuer Endpoint: GET /api/bestellung/{orderId} - liest aus Archiv
+- Bestaetigungsseite: Link zum Bestelldokument
+- CRM SoSS-Detail: Link zum Bestelldokument aus dem Archiv
+
+---
+
 ## v1.1.2 - 2026-04-04
 ### Grundsaetzliche Aenderung: Finanzdaten kommen aus D1, nicht aus Regex
 - Neues Feld fin_data (JSON) in documents-Tabelle (direkt in D1 ausgefuehrt)
