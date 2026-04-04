@@ -1,3 +1,13 @@
+## v1.1.2 - 2026-04-04
+### Grundsaetzliche Aenderung: Finanzdaten kommen aus D1, nicht aus Regex
+- Neues Feld fin_data (JSON) in documents-Tabelle (direkt in D1 ausgefuehrt)
+- Financials-Endpoint liest fin_data zuerst - keine Regex-Extraktion noetig
+- Nielsen Angebot 413251: fin_data direkt gesetzt (4314.69 EUR/Monat, 84 Monate)
+- Regex-Fallback bleibt fuer Dokumente ohne fin_data
+- Fuer neue Angebote: fin_data kann im CRM beim Upload gesetzt werden
+
+---
+
 ## v1.1.1 - 2026-04-04
 ### Behoben: Kritischer ReferenceError in extractFinancials
 - totalValue und contractMonths wurden zurueckgegeben aber nie deklariert

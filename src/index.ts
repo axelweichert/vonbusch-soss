@@ -162,9 +162,18 @@ app.get('/api/offer/financials', async (c) => {
   const sid = c.req.query('sid') || ''
   const s = await c.env.SOSS_DB.prepare('SELECT * FROM soss_sessions WHERE id=? AND expires_at>?').bind(sid, nowIso()).first() as any
   if (!s) return c.json({ error: 'Ungueltige Sitzung' }, 401)
-  const doc = await c.env.CRM_DB.prepare('SELECT r2_key_text, subject, summary, fulltext_idx FROM documents WHERE id=?').bind(s.document_id).first() as any
+  const doc = await c.env.CRM_DB.prepare('SELECT r2_key_text, subject, summary, fulltext_idx, fin_data FROM documents WHERE id=?').bind(s.document_id).first() as any
   if (!doc) return c.json({ error: 'Nicht gefunden' }, 404)
-  // Beste Textquelle: R2-Textdatei > fulltext_idx > summary
+
+  // Direktdaten aus D1 haben absolute Prioritaet - kein Regex noetig
+  if (doc.fin_data) {
+    try {
+      const fin = JSON.parse(doc.fin_data)
+      return c.json({ ...fin, subject: doc.subject, summary: doc.summary })
+    } catch (_) {}
+  }
+
+  // Fallback: Textextraktion
   let fullText = (doc.fulltext_idx || '') + ' ' + (doc.summary || '')
   if (doc.r2_key_text) {
     try {
@@ -174,6 +183,7 @@ app.get('/api/offer/financials', async (c) => {
   }
   return c.json({ ...extractFinancials(fullText), subject: doc.subject, summary: doc.summary })
 })
+
 
 app.post('/api/order', async (c) => {
   const body = await c.req.json() as any
