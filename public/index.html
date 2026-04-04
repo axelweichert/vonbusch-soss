@@ -167,7 +167,7 @@ h3{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transf
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);padding:20px 0">
-      <span style="color:var(--tx3)">v1.1.4</span>
+      <span style="color:var(--tx3)">v1.1.5</span>
       <span>von Busch GmbH &middot; <a href="https://vonbusch.digital" style="color:var(--ac)">vonbusch.digital</a> &middot; <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a></span>
     </div>
   </div>
@@ -192,7 +192,7 @@ h3{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transf
         &#128196; Bestelldokument ansehen
       </a>
       <div style="display:flex;justify-content:space-between;margin-top:24px;font-size:12px;color:var(--tx3)">
-        <span>v1.1.4</span>
+        <span>v1.1.5</span>
         <a href="/" style="color:var(--ac)">Zur&uuml;ck zur Startseite</a>
       </div>
     </div>
@@ -280,6 +280,7 @@ async function doLogin() {
   fillAngebot(data);
   loadFinancials();
   showView('angebot');
+  setTimeout(ensureCanvas, 50);
 }
 
 function fillAngebot(d) {
@@ -513,8 +514,12 @@ async function submitOrder() {
   }
 }
 
-// Init
-initCanvas();
+// Canvas lazy init - erst wenn View sichtbar ist
+var _canvasInited = false;
+function ensureCanvas() {
+  if (!_canvasInited) { initCanvas(); _canvasInited = true; }
+  else resizeCanvas();
+}
 
 // Check if already logged in via session cookie
 fetch('/api/session/check').then(function(r) { return r.json(); }).then(function(d) {
@@ -525,6 +530,7 @@ fetch('/api/session/check').then(function(r) { return r.json(); }).then(function
     fillAngebot(d);
     loadFinancials();
     showView('angebot');
+    setTimeout(ensureCanvas, 50);
   }
 }).catch(function() {});
 </script>

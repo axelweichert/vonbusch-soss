@@ -1,3 +1,13 @@
+## v1.1.5 - 2026-04-04
+### Behoben
+- Unterschriften-Canvas funktionierte nicht: Canvas wurde beim Seitenstart initialisiert,
+  waehrend das Angebot-View noch ausgeblendet war (display:none).
+  getBoundingClientRect() gab Breite 0 zurueck, Canvas hatte keine Zeichenflaeche.
+- Fix: Lazy Init (ensureCanvas) - Canvas wird erst initialisiert wenn View sichtbar ist
+  Aufruf via setTimeout(ensureCanvas, 50) nach showView('angebot')
+
+---
+
 ## v1.1.4 - 2026-04-04
 ### Neu: Bestelldokument als PDF (statt HTML)
 - Verwendet pdf-lib (rein JavaScript, laeuft nativ in Cloudflare Workers)
