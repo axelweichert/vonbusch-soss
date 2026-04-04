@@ -1,3 +1,13 @@
+## v1.0.6 – 2026-04-04
+### Behoben
+- Root-Ursache Build-Fehler behoben: Alle Backtick-Template-Literals im eingebetteten
+  JavaScript-Script-Block durch String-Konkatenation ersetzt.
+  Backticks innerhalb eines TypeScript-Template-Literals werden von esbuild als
+  Abschluss des äußeren Literals interpretiert und crashen den Build.
+- loadFinancials(): finCard()-Hilfsfunktion nutzt jetzt DOM-Methoden statt Template-Strings
+
+---
+
 ## v1.0.5 – 2026-04-04
 ### Behoben
 - Build-Fehler: Sonderzeichen U+00B7 (·) in Template-Literal → durch ASCII-Bindestrich ersetzt

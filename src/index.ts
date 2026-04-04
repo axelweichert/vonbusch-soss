@@ -166,7 +166,7 @@ app.get('/', async (c) => {
       <p style="font-size:12px;color:var(--tx2);text-align:center;margin-top:16px">
         Bei Fragen wenden Sie sich an <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a>
       </p>
-      <p style="font-size:11px;color:var(--tx3);text-align:center;margin-top:8px">v1.0.5</p>
+      <p style="font-size:11px;color:var(--tx3);text-align:center;margin-top:8px">v1.0.6</p>
     </div>
   `)
 })
@@ -363,7 +363,377 @@ app.get('/angebot', async (c) => {
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);padding:20px 0;flex-wrap:wrap;gap:8px">
-      <span style="color:var(--tx3)">v1.0.5</span>
+      <span style="color:var(--tx3)">v1.0.6</span>
+      <span>von Busch GmbH - <a href="https://vonbusch.digital" style="color:var(--ac)">vonbusch.digital</a> - <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a></span>
+    </div>
+  `, `
+  <script>
+ } from 'hono'
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
+
+type Env = {
+  SOSS_DB:  D1Database
+  CRM_DB:   D1Database
+  STORAGE:  R2Bucket
+  ARCHIVE:  R2Bucket
+  APP_URL:  string
+  CRM_URL:  string
+  MAIL_FROM: string
+  MAIL_FROM_NAME: string
+  MAILCHANNELS_API_KEY?: string
+  MS_CLIENT_ID?: string
+  MS_TENANT_ID?: string
+  MS_CLIENT_SECRET?: string
+}
+
+const app = new Hono<{ Bindings: Env }>()
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+
+function sessionId(): string { return crypto.randomUUID() }
+function nowIso(): string { return new Date().toISOString() }
+function addHours(h: number): string {
+  return new Date(Date.now() + h * 3600000).toISOString()
+}
+
+async function getSession(c: any): Promise<any> {
+  const sid = getCookie(c, 'soss_session')
+  if (!sid) return null
+  const s = await c.env.SOSS_DB.prepare(
+    `SELECT * FROM soss_sessions WHERE id=? AND expires_at>? AND used=0`
+  ).bind(sid, nowIso()).first()
+  return s || null
+}
+
+// Angebotsnummer extrahieren (413251-7 → 413251)
+function normalizeOfferNr(raw: string): string {
+  return raw.trim().replace(/-\d+$/, '').replace(/\s/g, '')
+}
+
+// ── HTML TEMPLATES ────────────────────────────────────────────────────────────
+
+const BASE_STYLE = `
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --ac:#00C2FF;--err:#dc2626;--ok:#16a34a;
+    --tx:#1a1a2e;--tx2:#4a4a6a;--tx3:#8a8aaa;
+    --bd:#e2e8f0;--bg:#f8fafc;--sf:#ffffff;--sf2:#f1f5f9;
+  }
+  [data-theme=dark]{
+    --tx:#e8eaf0;--tx2:#9a9ab8;--tx3:#5a5a7a;
+    --bd:#2a2a3e;--bg:#111120;--sf:#1a1a2e;--sf2:#22223a;
+  }
+  body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s}
+  /* Theme Toggle */
+  .theme-toggle{background:none;border:1.5px solid var(--bd);border-radius:20px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--tx2);font-family:inherit;transition:border-color .15s}
+  .theme-toggle:hover{border-color:var(--ac);color:var(--ac)}
+  .wrap{max-width:960px;margin:0 auto;padding:24px 16px}
+  .card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .logo{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:32px}
+  
+  h1{font-size:22px;font-weight:700;margin-bottom:8px}
+  h2{font-size:17px;font-weight:600;margin-bottom:14px;color:var(--tx)}
+  h3{font-size:14px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em}
+  .inp{width:100%;padding:10px 14px;border:1.5px solid var(--bd);border-radius:9px;font-size:15px;font-family:inherit;outline:none;transition:border-color .15s;background:var(--sf)}
+  .inp:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(0,194,255,.12)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;background:var(--ac);color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s;text-decoration:none;white-space:nowrap}
+  .btn:hover{opacity:.9}
+  .btn:active{opacity:.8}
+  .btn-sec{background:var(--sf);color:var(--tx);border:1.5px solid var(--bd)}
+  .btn-ok{background:var(--ok)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .field{margin-bottom:16px}
+  .label{display:block;font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:5px}
+  .val{font-size:15px;color:var(--tx)}
+  .badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600}
+  .badge-blue{background:rgba(0,194,255,.12);color:#0077aa}
+  .badge-ok{background:rgba(22,163,74,.1);color:var(--ok)}
+  .err-box{background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);border-radius:9px;padding:12px 16px;color:var(--err);font-size:14px;margin-bottom:16px}
+  .tab-bar{display:flex;gap:0;border-bottom:2px solid var(--bd);margin-bottom:20px}
+  .tab-btn{padding:10px 18px;background:none;border:none;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;color:var(--tx2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s}
+  .tab-btn.active{color:var(--ac);border-bottom-color:var(--ac)}
+  .fin-card{border:2px solid var(--bd);border-radius:12px;padding:18px;cursor:pointer;transition:border-color .2s,background .2s;position:relative}
+  .fin-card:hover{border-color:var(--ac)}
+  .fin-card.selected{border-color:var(--ac);background:rgba(0,194,255,.05)}
+  .fin-card input[type=radio]{position:absolute;opacity:0;width:0;height:0}
+  .fin-title{font-weight:700;font-size:15px;margin-bottom:4px}
+  .fin-sub{font-size:13px;color:var(--tx2)}
+  .fin-price{font-size:20px;font-weight:700;color:var(--ac);margin-top:8px}
+  #sig-canvas{border:2px dashed var(--bd);border-radius:10px;cursor:crosshair;touch-action:none;display:block;width:100%;background:#fff}
+  #sig-canvas.signed{border-color:var(--ac);border-style:solid}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;padding:8px 12px;background:var(--bg);color:var(--tx2);font-weight:600;border-bottom:1px solid var(--bd)}
+  td{padding:8px 12px;border-bottom:1px solid var(--bd);color:var(--tx)}
+  .step{display:flex;align-items:center;gap:12px;padding:8px 0}
+  .step-num{width:28px;height:28px;border-radius:50%;background:var(--ac);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ref-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:600px){.grid2{grid-template-columns:1fr}.ref-grid{grid-template-columns:1fr 1fr}}
+`
+
+function page(title: string, body: string, scripts = ''): Response {
+  const html = `<!DOCTYPE html><html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title} - von Busch - Sales Offer Self Service</title>
+<style>${BASE_STYLE}</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px">
+    <div class="logo" style="margin-bottom:0">
+      <a href="/" style="display:block;line-height:0">
+      <svg xmlns="http://www.w3.org/2000/svg" style="height:32px;width:auto;display:block" viewBox="0 0 546.42 118.1"><path fill="#0d1a14" d="M513.89,50V163.78h10.49V133c0-11.59.91-25.67,15.33-25.67,12.19,0,13,9.39,13,19.87v36.56h10.48V125.29c0-15.18-3.93-28.15-21-28.15-7.6,0-13.24,3.45-17.56,9.66l-.26-.27V50Zm-20.58,53.67a32.06,32.06,0,0,0-19-6.49c-18.09,0-32.9,14.91-32.9,34.22,0,19.59,14.15,34.22,32.77,34.22,7.34,0,13.5-2.35,19.53-6.63V144.19h-.27c-5.11,7-11.27,11.18-20.05,11.18-12.84,0-21.23-11.18-21.23-24s9-24,21.76-24c8.25,0,14.28,4.42,19.13,10.9h.26ZM425,109.15c-2.75-6.76-9.31-12-16.39-12a18,18,0,0,0-18.35,18.36c0,20.41,27.79,15.45,27.79,29.93a9.6,9.6,0,0,1-10,9.94c-6.95,0-10-4.28-12.58-10.35l-9.31,4.14c3.28,10.21,11.4,16.42,21.76,16.42a20.66,20.66,0,0,0,20.84-21.11c0-10.9-7.08-15.46-14.29-18.63s-14.28-5.38-14.28-11.31c0-4.14,3.93-7.18,7.6-7.18s6.94,3.18,8.39,6.63ZM330,98.94H319.52v37.39c0,17.24,6.16,29.25,24.38,29.25s24.38-12,24.38-29.25V98.94H357.79v36.14c0,10.9-1.18,20.29-13.89,20.29S330,146,330,135.08ZM252.94,70.52h4.32c13.5,0,22.94,1.65,22.94,17.38,0,16.14-10.62,17.66-23.07,17.66h-4.19Zm-11,93.26h22.93c19.53,0,35.39-8.28,35.39-29,0-12.42-6.94-23.59-18.74-26.63,6.68-4.69,9.7-11.86,9.7-20.28,0-21.25-15.07-28.14-33-28.14H241.93Zm11-48.28h9.57c12.05,0,26.73,2.34,26.73,18.48,0,15.87-13,19-25.29,19h-11ZM179.28,98.94H168.79v64.84h10.49V133c0-11.59.92-25.67,15.33-25.67,12.19,0,13,9.39,13,19.87v36.56h10.48V125.29c0-15.18-3.93-28.15-21-28.15-7.6,0-13.24,3.45-17.56,9.66h-.26Zm-61.21,8.41c13,0,21.89,10.9,21.89,24s-8.91,24-21.89,24-21.89-10.77-21.89-24,8.91-24,21.89-24m0,58.23c18,0,32.37-15,32.37-34.08s-14.28-34.36-32.37-34.36S85.7,112.46,85.7,131.5s14.41,34.08,32.37,34.08M28.68,98.94H16.75L47,168.06,77.18,98.94H65.38L47,142.54Z" transform="translate(-16.75 -49.96)"/></svg>
+      </a>
+      <span style="font-size:13px;color:var(--tx2);font-weight:400;margin-top:4px">Sales Offer Self Service</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="Design wechseln">☀️ Hell</button>
+  </div>
+  ${body}
+</div>
+${scripts}
+<script>
+(function(){var t=localStorage.getItem('soss_theme')||'light';document.documentElement.setAttribute('data-theme',t);var b=document.getElementById('theme-btn');if(b)b.textContent=t==='dark'?'☀️ Hell':'🌙 Dunkel'})()
+</script>
+</body></html>`
+  return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8' } })
+}
+
+// ── LOGIN PAGE ────────────────────────────────────────────────────────────────
+
+app.get('/', async (c) => {
+  const s = await getSession(c)
+  if (s) return c.redirect('/angebot')
+
+  const err = c.req.query('err')
+  const errMsg: Record<string,string> = {
+    notfound: 'Kundennummer oder Angebotsnummer nicht gefunden. Bitte prüfen Sie Ihre Eingabe.',
+    expired:  'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
+    used:     'Dieses Angebot wurde bereits beauftragt.',
+  }
+
+  return page('Anmelden', `
+    <div style="max-width:420px;margin:40px auto">
+      <h1>Ihr Angebot</h1>
+      <p style="color:var(--tx2);margin-bottom:24px;font-size:14px">
+        Bitte geben Sie Ihre Kundennummer und die Angebotsnummer ein, um Ihr Angebot anzusehen und zu beauftragen.
+      </p>
+      ${err ? `<div class="err-box">${errMsg[err]||err}</div>` : ''}
+      <div class="card" style="padding:24px">
+        <form method="POST" action="/api/auth/login">
+          <div class="field">
+            <label class="label" for="erp_id">Ihre Kundennummer</label>
+            <input class="inp" id="erp_id" name="erp_id" type="text" placeholder="z.B. 10051" required autocomplete="off">
+          </div>
+          <div class="field" style="margin-bottom:20px">
+            <label class="label" for="offer_nr">Angebotsnummer</label>
+            <input class="inp" id="offer_nr" name="offer_nr" type="text" placeholder="z.B. 413251" required autocomplete="off">
+            <div style="font-size:12px;color:var(--tx2);margin-top:4px">Die Angebotsnummer finden Sie in Ihrer Angebotsmail (ohne den Suffix nach dem Bindestrich).</div>
+          </div>
+          <button class="btn" type="submit" style="width:100%">Angebot anzeigen →</button>
+        </form>
+      </div>
+      <p style="font-size:12px;color:var(--tx2);text-align:center;margin-top:16px">
+        Bei Fragen wenden Sie sich an <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a>
+      </p>
+      <p style="font-size:11px;color:var(--tx3);text-align:center;margin-top:8px">v1.0.6</p>
+    </div>
+  `)
+})
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+
+app.post('/api/auth/login', async (c) => {
+  const form = await c.req.formData()
+  const erpId  = (form.get('erp_id')   as string || '').trim()
+  const offerNr = normalizeOfferNr(form.get('offer_nr') as string || '')
+  const ip = c.req.header('CF-Connecting-IP') || ''
+
+  if (!erpId || !offerNr) return c.redirect('/?err=notfound')
+
+  // Firma via Kundennummer
+  const co = await c.env.CRM_DB.prepare(
+    `SELECT id, name, erp_id FROM companies WHERE TRIM(erp_id)=?`
+  ).bind(erpId).first() as any
+  if (!co) return c.redirect('/?err=notfound')
+
+  // Angebot via Angebotsnummer
+  const doc = await c.env.CRM_DB.prepare(
+    `SELECT d.id, d.subject, d.r2_key, d.company_id, d.doc_type
+     FROM documents d
+     WHERE d.company_id=? AND d.doc_type='Angebot' AND d.is_archived=0
+       AND (d.subject LIKE ? OR d.subject LIKE ?)
+     ORDER BY d.created_at DESC LIMIT 1`
+  ).bind(co.id, `%${offerNr}%`, `%${offerNr}-%`).first() as any
+
+  if (!doc) return c.redirect('/?err=notfound')
+
+  // Prüfen ob schon beauftragt
+  const existing = await c.env.SOSS_DB.prepare(
+    `SELECT id FROM soss_orders WHERE document_id=? AND status!='rejected'`
+  ).bind(doc.id).first()
+  if (existing) return c.redirect('/?err=used')
+
+  // Primären Kontakt laden
+  const contact = await c.env.CRM_DB.prepare(
+    `SELECT id, first_name, last_name, email FROM contacts WHERE company_id=? LIMIT 1`
+  ).bind(co.id).first() as any
+
+  const sid = sessionId()
+  await c.env.SOSS_DB.prepare(
+    `INSERT INTO soss_sessions (id,company_id,document_id,erp_id,offer_number,contact_id,created_at,expires_at,ip_address)
+     VALUES (?,?,?,?,?,?,?,?,?)`
+  ).bind(sid, co.id, doc.id, erpId, offerNr, contact?.id||null, nowIso(), addHours(48), ip).run()
+
+  setCookie(c, 'soss_session', sid, {
+    httpOnly: true, secure: true, sameSite: 'Lax', path: '/', maxAge: 48*3600
+  })
+  return c.redirect('/angebot')
+})
+
+app.get('/api/auth/logout', (c) => {
+  deleteCookie(c, 'soss_session')
+  return c.redirect('/')
+})
+
+// ── ANGEBOT PAGE ──────────────────────────────────────────────────────────────
+
+app.get('/angebot', async (c) => {
+  const s = await getSession(c)
+  if (!s) return c.redirect('/?err=expired')
+
+  // Firmendaten
+  const co = await c.env.CRM_DB.prepare(
+    `SELECT co.*, ct.first_name, ct.last_name, ct.email as ct_email, ct.phone as ct_phone
+     FROM companies co
+     LEFT JOIN contacts ct ON ct.company_id=co.id
+     WHERE co.id=? LIMIT 1`
+  ).bind(s.company_id).first() as any
+
+  // Dokumentdaten + KI-Extraktion
+  const doc = await c.env.CRM_DB.prepare(
+    `SELECT * FROM documents WHERE id=?`
+  ).bind(s.document_id).first() as any
+
+  const firma = co?.name || '–'
+  const kontakt = co ? `${co.first_name||''} ${co.last_name||''}`.trim() || '–' : '–'
+  const email = co?.ct_email || co?.email || '–'
+  const adresse = [co?.street, co?.zip && co?.city ? `${co.zip} ${co.city}` : co?.city].filter(Boolean).join(', ') || '–'
+  const today = new Date().toLocaleDateString('de-DE', {day:'2-digit',month:'long',year:'numeric'})
+
+  // Finanzierungsoptionen werden per JS via /api/offer/financials geladen
+  const kaufPreis = 0, mieteRate = 0, leasingRate = 0, monate = 0
+
+  return page('Ihr Angebot', `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <h1 style="margin:0">Ihr Angebot</h1>
+      <a href="/api/auth/logout" style="font-size:13px;color:var(--tx2);text-decoration:none">Abmelden</a>
+    </div>
+
+    <!-- Kundendaten -->
+    <div class="card">
+      <h3>Angebot für</h3>
+      <div class="grid2">
+        <div>
+          <div class="field"><span class="label">Firma</span><span class="val" style="font-weight:600">${firma}</span></div>
+          <div class="field"><span class="label">Ansprechpartner</span><span class="val">${kontakt}</span></div>
+          <div class="field"><span class="label">E-Mail</span><span class="val">${email}</span></div>
+        </div>
+        <div>
+          <div class="field"><span class="label">Adresse</span><span class="val">${adresse}</span></div>
+          <div class="field"><span class="label">Kundennummer</span><span class="val">${s.erp_id}</span></div>
+          <div class="field"><span class="label">Angebotsnummer</span><span class="val">${s.offer_number}</span></div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--tx2)">Datum: ${today}</div>
+    </div>
+
+    <!-- Angebot PDF + Daten Tabs -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="tab-bar" style="padding:0 24px;margin:0">
+        <button class="tab-btn active" onclick="showTab('overview',this)">📋 Übersicht</button>
+        <button class="tab-btn" onclick="showTab('pdf',this)">📄 Angebot (PDF)</button>
+      </div>
+
+      <!-- Tab: Übersicht -->
+      <div id="tab-overview" style="padding:24px">
+        <h3>Angebotsinhalt</h3>
+        <p style="font-size:14px;color:var(--tx2);margin-bottom:16px">${doc?.subject || 'Ihr Angebot'}</p>
+        ${doc?.summary ? `<div style="background:var(--bg);border-radius:8px;padding:14px;font-size:13px;color:var(--tx2);margin-bottom:16px">${doc.summary}</div>` : ''}
+        ${doc?.tags ? `<div style="margin-bottom:8px">${(JSON.parse(doc.tags||'[]') as string[]).map(t=>`<span class="badge badge-blue" style="margin-right:4px">${t}</span>`).join('')}</div>` : ''}
+      </div>
+
+      <!-- Tab: PDF -->
+      <div id="tab-pdf" style="display:none;padding:0">
+        <iframe id="pdf-frame" src="/api/offer/pdf?sid=${s.id}"
+          style="width:100%;height:680px;border:none;display:block"
+          title="Angebot PDF">
+        </iframe>
+      </div>
+    </div>
+
+    <!-- Finanzierungsoptionen -->
+    <div class="card">
+      <h2>Finanzierungsart wählen</h2>
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:20px">Bitte wählen Sie, wie Sie das Angebot finanzieren möchten:</p>
+
+      <div id="fin-options" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
+        <div style="grid-column:1/-1;text-align:center;color:var(--tx2);font-size:13px;padding:20px">
+          ⏳ Finanzierungsoptionen werden geladen…
+        </div>
+      </div>
+
+      <!-- Refinanzierer (nur bei Miete/Leasing) -->
+      <div id="ref-section" style="display:none">
+        <h3 style="margin-bottom:10px">Finanzierungspartner</h3>
+        <div class="ref-grid" id="ref-grid">
+          ${['BFL','DLL','GRENKE','MLF (Mercator)','von Busch'].map(r=>`
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px solid var(--bd);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">
+            <input type="radio" name="refinanzierer" value="${r}"> ${r}
+          </label>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Servicevertrag -->
+    <div class="card" id="sv-card">
+      <h2>Servicevertrag</h2>
+      <div id="sv-content">
+        <div style="color:var(--tx2);font-size:13px">⏳ Wird geladen…</div>
+      </div>
+    </div>
+
+    <!-- Digitale Unterschrift -->
+    <div class="card">
+      <h2>Digitale Unterschrift</h2>
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:16px">
+        Mit Ihrer Unterschrift erteilen Sie verbindlich den Auftrag für das oben ausgewählte Angebot in der gewählten Finanzierungsform.
+        Eine Auftragsbestätigung erhalten Sie per E-Mail.
+      </p>
+
+      <div style="margin-bottom:12px">
+        <label class="label">Unterschrift (Maus oder Touch)</label>
+        <canvas id="sig-canvas" width="800" height="160"></canvas>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:20px">
+        <button class="btn btn-sec" onclick="clearSig()" type="button" style="font-size:13px;padding:8px 16px">Löschen</button>
+        <span id="sig-hint" style="font-size:13px;color:var(--tx2);line-height:1.4;align-self:center">Bitte unterschreiben Sie im Feld oben</span>
+      </div>
+
+      <div style="background:rgba(0,194,255,.06);border:1px solid rgba(0,194,255,.2);border-radius:9px;padding:14px 16px;font-size:13px;margin-bottom:20px">
+        Mit dem Absenden bestätigen ich / wir die <strong>verbindliche Beauftragung</strong> und stimme den 
+        <a href="https://vonbusch.digital/agb" target="_blank" style="color:var(--ac)">AGB der von Busch GmbH</a> zu.
+        Eine Bonitätsprüfung wird im Hintergrund durchgeführt.
+      </div>
+
+      <button class="btn btn-ok" onclick="submitOrder()" id="submit-btn" style="width:100%;font-size:16px;padding:14px">
+        ✓ Auftrag verbindlich erteilen
+      </button>
+      <div id="submit-err" style="display:none" class="err-box" style="margin-top:12px"></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);padding:20px 0;flex-wrap:wrap;gap:8px">
+      <span style="color:var(--tx3)">v1.0.6</span>
       <span>von Busch GmbH - <a href="https://vonbusch.digital" style="color:var(--ac)">vonbusch.digital</a> - <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a></span>
     </div>
   `, `
@@ -388,98 +758,36 @@ app.get('/angebot', async (c) => {
     const opts = document.getElementById('fin-options')
     const types = _fin.financingTypes || ['kauf','miete','leasing']
     const monate = _fin.contractMonths || 36
-    const billing = _fin.billingCycle ? ` - ${_fin.billingCycle}` : ''
-
-    // Rate für Leasing: 92% der Miete wenn nicht separat im PDF
+    const billing = _fin.billingCycle ? ' - ' + _fin.billingCycle : ''
     const leasingRate = _fin.monthlyRate ? _fin.monthlyRate * 0.92 : 0
 
-    const cards = {
-      kauf: `<label class="fin-card" id="card-kauf">
-        <input type="radio" name="fin_type" value="kauf" onchange="selectFin('kauf')">
-        <div class="fin-title">💳 Kauf</div>
-        <div class="fin-sub">Einmalige Zahlung</div>
-        <div class="fin-price">${_fin.totalValue ? fEu(_fin.totalValue) : '– auf Anfrage –'}</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:4px">Netto zzgl. MwSt.</div>
-      </label>`,
-      miete: `<label class="fin-card" id="card-miete">
-        <input type="radio" name="fin_type" value="miete" onchange="selectFin('miete')">
-        <div class="fin-title">📅 Miete</div>
-        <div class="fin-sub">${monate} Monate Laufzeit${billing}</div>
-        <div class="fin-price">${_fin.monthlyRate ? fEu(_fin.monthlyRate)+'/Monat' : '– auf Anfrage –'}</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:4px">Netto zzgl. MwSt.</div>
-      </label>`,
-      leasing: `<label class="fin-card" id="card-leasing">
-        <input type="radio" name="fin_type" value="leasing" onchange="selectFin('leasing')">
-        <div class="fin-title">🔑 Leasing</div>
-        <div class="fin-sub">${monate} Monate Laufzeit</div>
-        <div class="fin-price">${leasingRate ? fEu(leasingRate)+'/Monat' : '– auf Anfrage –'}</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:4px">Netto zzgl. MwSt.</div>
-      </label>`,
+    function finCard(type, title, sub, price) {
+      const d = document.createElement('label')
+      d.className = 'fin-card'
+      d.id = 'card-' + type
+      d.innerHTML = '<input type="radio" name="fin_type" value="' + type + '" onchange="selectFin(\'' + type + '\')">'
+        + '<div class="fin-title">' + title + '</div>'
+        + '<div class="fin-sub">' + sub + '</div>'
+        + '<div class="fin-price">' + price + '</div>'
+        + '<div style="font-size:12px;color:var(--tx2);margin-top:4px">Netto zzgl. MwSt.</div>'
+      return d
     }
 
-    opts.innerHTML = types.map(t => cards[t] || '').join('')
+    const priceKauf    = _fin.totalValue   ? fEu(_fin.totalValue)   : '\u2013 auf Anfrage \u2013'
+    const priceMiete   = _fin.monthlyRate  ? fEu(_fin.monthlyRate)  + '/Monat' : '\u2013 auf Anfrage \u2013'
+    const priceLeasing = leasingRate       ? fEu(leasingRate)       + '/Monat' : '\u2013 auf Anfrage \u2013'
 
-    // Servicevertrag rendern
+    opts.innerHTML = ''
+    const cardDefs = {
+      kauf:    finCard('kauf',    '\uD83D\uDCB3 Kauf',    'Einmalige Zahlung',                     priceKauf),
+      miete:   finCard('miete',   '\uD83D\uDCC5 Miete',   monate + ' Monate Laufzeit' + billing,   priceMiete),
+      leasing: finCard('leasing', '\uD83D\uDD11 Leasing', monate + ' Monate Laufzeit',             priceLeasing),
+    }
+    types.forEach(function(t) { if (cardDefs[t]) opts.appendChild(cardDefs[t]) })
+
     renderServicevertrag(_fin.hasServiceContract, monate)
   }
 
-  function renderServicevertrag(hasInOffer, monate) {
-    const el = document.getElementById('sv-content')
-    if (!el) return
-
-    if (hasInOffer) {
-      // Servicevertrag ist im Angebot enthalten
-      el.innerHTML = `
-        <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px">
-          ✅ <strong>Servicevertrag im Angebot enthalten</strong><br>
-          <span style="color:var(--tx2)">Umfasst Wartung, Support und Betrieb gemäß Angebot. Laufzeit: ${monate} Monate.</span>
-        </div>
-        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
-          <input type="checkbox" id="service-included" checked style="margin-top:3px;width:18px;height:18px;accent-color:var(--ac)">
-          <div>
-            <div style="font-weight:600;margin-bottom:3px">Servicevertrag einschließen</div>
-            <div style="font-size:13px;color:var(--tx2)">Ist Bestandteil des Angebots und wird mit beauftragt.</div>
-          </div>
-        </label>`
-    } else {
-      // Kein Servicevertrag im Angebot
-      el.innerHTML = `
-        <div style="background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin-bottom:14px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;color:var(--tx2)">Servicevertrag</span>
-            <span style="font-weight:700;color:var(--tx3)">–,– €</span>
-          </div>
-          <div style="font-size:12px;color:var(--tx3);margin-top:4px">Kein Servicevertrag im Angebot enthalten</div>
-        </div>
-        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:14px;background:rgba(0,194,255,.04);border:1.5px dashed var(--ac);border-radius:10px">
-          <input type="checkbox" id="service-included" style="margin-top:3px;width:18px;height:18px;accent-color:var(--ac);flex-shrink:0">
-          <div>
-            <div style="font-weight:600;margin-bottom:3px;color:var(--tx)">Servicevertrag hinzufügen?</div>
-            <div style="font-size:13px;color:var(--tx2)">
-              Setzen Sie diesen Haken, wenn Sie Interesse an einem Servicevertrag haben. 
-              Ihr zuständiger von Busch Mitarbeiter meldet sich bei Ihnen mit einem passenden Angebot.
-            </div>
-          </div>
-        </label>`
-    }
-  }
-
-  // Tabs
-  function showTab(id, btn){
-    document.getElementById('tab-overview').style.display='none'
-    document.getElementById('tab-pdf').style.display='none'
-    document.getElementById('tab-'+id).style.display='block'
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'))
-    btn.classList.add('active')
-  }
-
-  // Finanzierung wählen
-  function selectFin(type){
-    document.querySelectorAll('.fin-card').forEach(c=>c.classList.remove('selected'))
-    document.getElementById('card-'+type)?.classList.add('selected')
-    const showRef = type==='miete'||type==='leasing'
-    document.getElementById('ref-section').style.display = showRef?'block':'none'
-  }
 
   // ── SIGNATURE PAD ──────────────────────────────────────────────────────────
   const canvas = document.getElementById('sig-canvas')
@@ -930,7 +1238,7 @@ app.get('/bestaetigung', (c) => {
       </p>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);padding:20px 0">
-      <span style="color:var(--tx3)">v1.0.5</span>
+      <span style="color:var(--tx3)">v1.0.6</span>
       <a href="/" style="color:var(--ac)">Zurück zur Startseite</a>
     </div>
   `)
