@@ -1,3 +1,13 @@
+## v1.1.1 - 2026-04-04
+### Behoben: Kritischer ReferenceError in extractFinancials
+- totalValue und contractMonths wurden zurueckgegeben aber nie deklariert
+  Das verursachte einen 500-Fehler, res.json() schlug fehl, die Seite blieb bei
+  'Wird geladen...' eingefroren
+- contractMonths und totalValue wieder korrekt extrahiert (Laufzeit + Kaufpreis)
+- loadFinancials() mit try-catch abgesichert so dass Fehler sichtbar werden
+
+---
+
 ## v1.1.0 - 2026-04-04
 ### Behoben: Finanzierungswerte wurden nicht angezeigt
 - Root Cause: Regex traf nicht weil "84 Monate" zwischen "Preis/Monat" und "4.314,69 EUR" steht

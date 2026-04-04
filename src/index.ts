@@ -30,29 +30,42 @@ function extractFinancials(text: string) {
   const t = text || ''
   let monthlyRate: number | null = null
 
-  // Robuste Eurobetrags-Extraktion: findet alle "X.XXX,XX €" Muster
+  // Alle Euro-Beträge im Text
   const allAmounts = [...t.matchAll(/((?:\d{1,3}\.)*\d{1,3},\d{2})\s*\u20ac/g)]
     .map(m => parseDE(m[1])).filter(v => v > 100)
 
-  // Preis/Monat Kontext: Wert in der gleichen Zeile oder nächsten Zeile nach "Preis/Monat"
+  // Preis/Monat mit Kontext
   const preisMonate = t.match(/Preis\/Monat[\s\S]{0,80}?((?:\d{1,3}\.)*\d{1,3},\d{2})\s*\u20ac/i)
   if (preisMonate) monthlyRate = parseDE(preisMonate[1])
 
-  // Miete-Zeile: "84 Monate\n4.314,69 €" oder ähnlich
+  // Miete-Block
   if (!monthlyRate) {
     const mieteMatch = t.match(/Miete[\s\S]{0,200}?((?:\d{1,3}\.)*\d{1,3},\d{2})\s*\u20ac/i)
     if (mieteMatch) monthlyRate = parseDE(mieteMatch[1])
   }
 
-  // "X Monate [whitespace] Y,YY €" Pattern
+  // "X Monate ... Y,YY €"
   if (!monthlyRate) {
     const lzRate = t.match(/(\d{2,3})\s+Monate[\s\S]{0,50}?((?:\d{1,3}\.)*\d{1,3},\d{2})\s*\u20ac/i)
     if (lzRate) monthlyRate = parseDE(lzRate[2])
   }
 
-  // Letzter Fallback: größter Betrag im Text wenn Miete/Rate erwähnt
+  // Fallback: groesster Betrag wenn Miete/Rate erwaehnt
   if (!monthlyRate && allAmounts.length && /Miete|Rate|Laufzeit/i.test(t)) {
     monthlyRate = allAmounts[0]
+  }
+
+  // Laufzeit in Monaten
+  let contractMonths: number | null = null
+  const lz = t.match(/Laufzeit[\s\S]{0,30}?(\d{2,3})\s*Monate/i) || t.match(/(\d{2,3})\s+Monate/i)
+  if (lz) contractMonths = parseInt(lz[1])
+
+  // Kaufpreis
+  let totalValue: number | null = null
+  const kaufPat = [/Kauf[\s\S]{0,100}?((?:\d{1,3}\.)*\d{1,3},\d{2})\s*\u20ac/i, /Gesamtpreis[\s\S]{0,30}?((?:\d{1,3}\.)*\d{1,3},\d{2})\s*\u20ac/i]
+  for (const re of kaufPat) {
+    const m = t.match(re)
+    if (m) { const v = parseDE(m[1]); if (v > 0) { totalValue = v; break } }
   }
   const financingTypes: string[] = []
   if (/\bKauf\b/i.test(t)) financingTypes.push('kauf')
