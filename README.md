@@ -1,3 +1,10 @@
+## v1.0.5 – 2026-04-04
+### Behoben
+- Build-Fehler: Sonderzeichen U+00B7 (·) in Template-Literal → durch ASCII-Bindestrich ersetzt
+- esbuild/wrangler konnte diesen Unicode-Punkt nicht parsen
+
+---
+
 ## v1.0.4 – 2026-04-04
 ### Neu
 - Light/Dark Mode Toggle (oben rechts, neben Abmelden)

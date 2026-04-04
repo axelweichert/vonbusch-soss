@@ -105,7 +105,7 @@ function page(title: string, body: string, scripts = ''): Response {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title} — von Busch · Sales Offer Self Service</title>
+<title>${title} - von Busch - Sales Offer Self Service</title>
 <style>${BASE_STYLE}</style>
 </head>
 <body>
@@ -166,7 +166,7 @@ app.get('/', async (c) => {
       <p style="font-size:12px;color:var(--tx2);text-align:center;margin-top:16px">
         Bei Fragen wenden Sie sich an <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a>
       </p>
-      <p style="font-size:11px;color:var(--tx3);text-align:center;margin-top:8px">v1.0.4</p>
+      <p style="font-size:11px;color:var(--tx3);text-align:center;margin-top:8px">v1.0.5</p>
     </div>
   `)
 })
@@ -363,8 +363,8 @@ app.get('/angebot', async (c) => {
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);padding:20px 0;flex-wrap:wrap;gap:8px">
-      <span style="color:var(--tx3)">v1.0.4</span>
-      <span>von Busch GmbH · <a href="https://vonbusch.digital" style="color:var(--ac)">vonbusch.digital</a> · <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a></span>
+      <span style="color:var(--tx3)">v1.0.5</span>
+      <span>von Busch GmbH - <a href="https://vonbusch.digital" style="color:var(--ac)">vonbusch.digital</a> - <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a></span>
     </div>
   `, `
   <script>
@@ -388,7 +388,7 @@ app.get('/angebot', async (c) => {
     const opts = document.getElementById('fin-options')
     const types = _fin.financingTypes || ['kauf','miete','leasing']
     const monate = _fin.contractMonths || 36
-    const billing = _fin.billingCycle ? ` · ${_fin.billingCycle}` : ''
+    const billing = _fin.billingCycle ? ` - ${_fin.billingCycle}` : ''
 
     // Rate für Leasing: 92% der Miete wenn nicht separat im PDF
     const leasingRate = _fin.monthlyRate ? _fin.monthlyRate * 0.92 : 0
@@ -930,7 +930,7 @@ app.get('/bestaetigung', (c) => {
       </p>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);padding:20px 0">
-      <span style="color:var(--tx3)">v1.0.4</span>
+      <span style="color:var(--tx3)">v1.0.5</span>
       <a href="/" style="color:var(--ac)">Zurück zur Startseite</a>
     </div>
   `)
