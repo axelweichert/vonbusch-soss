@@ -457,20 +457,37 @@ app.post('/api/order', async (c) => {
     await c.env.SOSS_DB.prepare('INSERT INTO soss_credit_checks (id,order_id,refinanzierer,status,created_at) VALUES (?,?,?,?,?)').bind(uuid(), orderId, financing_partner || 'von Busch', 'pending', now).run()
     await c.env.SOSS_DB.prepare('UPDATE soss_orders SET crm_deal_id=?,crm_activity_id=? WHERE id=?').bind(dealId, akId, orderId).run()
   } catch (_) {}
-  return c.json({ success: true, order_id: orderId, bestellung_key: bestellungKey, bestellung_doc_id: bestellungDocId })
+  const bestellungUrl = bestellungKey
+    ? '/api/bestellung/' + orderId + '?sid=' + session_id
+    : null
+  return c.json({ success: true, order_id: orderId, bestellung_url: bestellungUrl })
 })
 
 
 // ── BESTELLDOKUMENT ANZEIGEN ──────────────────────────────────────────────────
 app.get('/api/bestellung/:orderId', async (c) => {
-  const s = await getSessionFromCookie(c) as any
-  // Auch via sid Parameter (fuer Bestaetigungsseite direkt nach Bestellung)
+  // Session-Check: used=1 erlaubt (Session nach Bestellung verbraucht aber PDF noch abrufbar)
   const sid = c.req.query('sid') || ''
-  let session = s
-  if (!session && sid) {
-    session = await c.env.SOSS_DB.prepare('SELECT * FROM soss_sessions WHERE id=? AND expires_at>?').bind(sid, nowIso()).first() as any
+  let session: any = null
+  if (sid) {
+    // Direkter sid-Parameter: auch used=1 erlaubt, aber Ablauf prüfen
+    session = await c.env.SOSS_DB.prepare(
+      'SELECT * FROM soss_sessions WHERE id=? AND expires_at>?'
+    ).bind(sid, nowIso()).first() as any
   }
-  if (!session) return c.json({ error: 'Nicht authentifiziert' }, 401)
+  if (!session) {
+    // Cookie-Fallback (auch used=1 erlaubt)
+    const cookieSid = require ? null : null  // Cookie-Header manuell lesen
+    const cookieHeader = c.req.header('Cookie') || ''
+    const cm = cookieHeader.match(/soss_session=([^;]+)/)
+    const cookieVal = cm ? cm[1] : ''
+    if (cookieVal) {
+      session = await c.env.SOSS_DB.prepare(
+        'SELECT * FROM soss_sessions WHERE id=? AND expires_at>?'
+      ).bind(cookieVal, nowIso()).first() as any
+    }
+  }
+  if (!session) return new Response('Nicht authentifiziert', { status: 401 })
 
   const order = await c.env.SOSS_DB.prepare('SELECT * FROM soss_orders WHERE id=? AND company_id=?').bind(c.req.param('orderId'), session.company_id).first() as any
   if (!order) return c.json({ error: 'Nicht gefunden' }, 404)

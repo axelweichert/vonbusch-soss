@@ -1,3 +1,14 @@
+## v1.1.6 - 2026-04-04
+### Behoben: Bestelldokument-Link fuehrte zur Anmeldemaske
+- Bug 1: bestellung_url fehlte im Order-Response (war bestellung_key statt URL)
+  Fix: Response gibt jetzt bestellung_url = /api/bestellung/{orderId}?sid={session_id}
+- Bug 2: Session nach Bestellung als used=1 markiert, Auth-Check blockierte Endpoint
+  Fix: Bestelldokument-Endpoint erlaubt Sessions mit used=1 (48h nach Bestellung)
+- Bug 3: HTML hatte doppeltes display-Property (display:none und display:inline-flex)
+  Fix: Wrapper-div steuert Sichtbarkeit, Link-Button immer display:inline-flex
+
+---
+
 ## v1.1.5 - 2026-04-04
 ### Behoben
 - Unterschriften-Canvas funktionierte nicht: Canvas wurde beim Seitenstart initialisiert,
