@@ -48,8 +48,8 @@ const BASE_STYLE = `
   body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.5;min-height:100vh}
   .wrap{max-width:960px;margin:0 auto;padding:24px 16px}
   .card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-  .logo{display:flex;align-items:center;gap:6px;font-size:20px;font-weight:700;color:var(--tx);margin-bottom:32px}
-  .logo span{color:var(--ac)}
+  .logo{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:32px}
+  
   h1{font-size:22px;font-weight:700;margin-bottom:8px}
   h2{font-size:17px;font-weight:600;margin-bottom:14px;color:var(--tx)}
   h3{font-size:14px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em}
@@ -94,12 +94,17 @@ function page(title: string, body: string, scripts = ''): Response {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title} — vonBusch SoSS</title>
+<title>${title} — von Busch · Sales Offer Self Service</title>
 <style>${BASE_STYLE}</style>
 </head>
 <body>
 <div class="wrap">
-  <div class="logo">von<span>Busch</span> · Angebot &amp; Auftrag</div>
+  <div class="logo">
+    <a href="/" style="display:block;line-height:0">
+      <svg xmlns="http://www.w3.org/2000/svg" style="height:32px;width:auto;display:block" viewBox="0 0 546.42 118.1"><path fill="#0d1a14" d="M513.89,50V163.78h10.49V133c0-11.59.91-25.67,15.33-25.67,12.19,0,13,9.39,13,19.87v36.56h10.48V125.29c0-15.18-3.93-28.15-21-28.15-7.6,0-13.24,3.45-17.56,9.66l-.26-.27V50Zm-20.58,53.67a32.06,32.06,0,0,0-19-6.49c-18.09,0-32.9,14.91-32.9,34.22,0,19.59,14.15,34.22,32.77,34.22,7.34,0,13.5-2.35,19.53-6.63V144.19h-.27c-5.11,7-11.27,11.18-20.05,11.18-12.84,0-21.23-11.18-21.23-24s9-24,21.76-24c8.25,0,14.28,4.42,19.13,10.9h.26ZM425,109.15c-2.75-6.76-9.31-12-16.39-12a18,18,0,0,0-18.35,18.36c0,20.41,27.79,15.45,27.79,29.93a9.6,9.6,0,0,1-10,9.94c-6.95,0-10-4.28-12.58-10.35l-9.31,4.14c3.28,10.21,11.4,16.42,21.76,16.42a20.66,20.66,0,0,0,20.84-21.11c0-10.9-7.08-15.46-14.29-18.63s-14.28-5.38-14.28-11.31c0-4.14,3.93-7.18,7.6-7.18s6.94,3.18,8.39,6.63ZM330,98.94H319.52v37.39c0,17.24,6.16,29.25,24.38,29.25s24.38-12,24.38-29.25V98.94H357.79v36.14c0,10.9-1.18,20.29-13.89,20.29S330,146,330,135.08ZM252.94,70.52h4.32c13.5,0,22.94,1.65,22.94,17.38,0,16.14-10.62,17.66-23.07,17.66h-4.19Zm-11,93.26h22.93c19.53,0,35.39-8.28,35.39-29,0-12.42-6.94-23.59-18.74-26.63,6.68-4.69,9.7-11.86,9.7-20.28,0-21.25-15.07-28.14-33-28.14H241.93Zm11-48.28h9.57c12.05,0,26.73,2.34,26.73,18.48,0,15.87-13,19-25.29,19h-11ZM179.28,98.94H168.79v64.84h10.49V133c0-11.59.92-25.67,15.33-25.67,12.19,0,13,9.39,13,19.87v36.56h10.48V125.29c0-15.18-3.93-28.15-21-28.15-7.6,0-13.24,3.45-17.56,9.66h-.26Zm-61.21,8.41c13,0,21.89,10.9,21.89,24s-8.91,24-21.89,24-21.89-10.77-21.89-24,8.91-24,21.89-24m0,58.23c18,0,32.37-15,32.37-34.08s-14.28-34.36-32.37-34.36S85.7,112.46,85.7,131.5s14.41,34.08,32.37,34.08M28.68,98.94H16.75L47,168.06,77.18,98.94H65.38L47,142.54Z" transform="translate(-16.75 -49.96)"/></svg>
+    </a>
+    <span style="font-size:13px;color:var(--tx2);font-weight:400;margin-top:4px">Sales Offer Self Service</span>
+  </div>
   ${body}
 </div>
 ${scripts}
