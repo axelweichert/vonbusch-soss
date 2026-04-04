@@ -1,3 +1,10 @@
+## v1.1.7 - 2026-04-04
+### Neu: PDF-Fallback fuer Testkunden
+- Wenn Angebots-PDF nicht in R2 vorhanden, wird automatisch das Demo-PDF gezeigt
+  (noetig fuer Testkunden wie Weichert.at die kein eigenes PDF hochgeladen haben)
+
+---
+
 ## v1.1.6 - 2026-04-04
 ### Behoben: Bestelldokument-Link fuehrte zur Anmeldemaske
 - Bug 1: bestellung_url fehlte im Order-Response (war bestellung_key statt URL)
