@@ -59,3 +59,6 @@ CREATE TABLE IF NOT EXISTS soss_credit_checks (
 );
 CREATE INDEX IF NOT EXISTS idx_credit_order ON soss_credit_checks(order_id);
 CREATE INDEX IF NOT EXISTS idx_credit_status ON soss_credit_checks(status);
+
+-- Migration 0002: service_interest Spalte (bereits direkt in D1 ausgeführt)
+-- ALTER TABLE soss_orders ADD COLUMN service_interest INTEGER DEFAULT 0;

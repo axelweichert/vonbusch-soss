@@ -233,16 +233,8 @@ app.get('/angebot', async (c) => {
   const adresse = [co?.street, co?.zip && co?.city ? `${co.zip} ${co.city}` : co?.city].filter(Boolean).join(', ') || '–'
   const today = new Date().toLocaleDateString('de-DE', {day:'2-digit',month:'long',year:'numeric'})
 
-  // Finanzierungsoptionen aus KI-Extraktion
-  const monthlyRate    = doc?.summary ? extractNumber(doc.summary, 'monatlich|rate|mtl') : null
-  const totalValue     = doc?.summary ? extractNumber(doc.summary, 'gesamt|summe|netto') : null
-  const contractMonths = doc?.summary ? extractNumber(doc.summary, 'laufzeit|monate') : null
-  const oneTimeCost    = doc?.summary ? extractNumber(doc.summary, 'einmalk|kauf') : null
-
-  const kaufPreis = oneTimeCost || totalValue || 0
-  const mieteRate = monthlyRate || (kaufPreis / 48)
-  const leasingRate = mieteRate ? mieteRate * 0.92 : 0
-  const monate = contractMonths || 36
+  // Finanzierungsoptionen werden per JS via /api/offer/financials geladen
+  const kaufPreis = 0, mieteRate = 0, leasingRate = 0, monate = 0
 
   return page('Ihr Angebot', `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -298,27 +290,9 @@ app.get('/angebot', async (c) => {
       <p style="font-size:13px;color:var(--tx2);margin-bottom:20px">Bitte wählen Sie, wie Sie das Angebot finanzieren möchten:</p>
 
       <div id="fin-options" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
-        <label class="fin-card" id="card-kauf">
-          <input type="radio" name="fin_type" value="kauf" onchange="selectFin('kauf')">
-          <div class="fin-title">💳 Kauf</div>
-          <div class="fin-sub">Einmalige Zahlung</div>
-          <div class="fin-price">${fEu(kaufPreis)}</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">Netto zzgl. MwSt.</div>
-        </label>
-        <label class="fin-card" id="card-miete">
-          <input type="radio" name="fin_type" value="miete" onchange="selectFin('miete')">
-          <div class="fin-title">📅 Miete</div>
-          <div class="fin-sub">${monate} Monate Laufzeit</div>
-          <div class="fin-price">${fEu(mieteRate)}/Monat</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">Netto zzgl. MwSt.</div>
-        </label>
-        <label class="fin-card" id="card-leasing">
-          <input type="radio" name="fin_type" value="leasing" onchange="selectFin('leasing')">
-          <div class="fin-title">🔑 Leasing</div>
-          <div class="fin-sub">${monate} Monate Laufzeit</div>
-          <div class="fin-price">${fEu(leasingRate)}/Monat</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:4px">Netto zzgl. MwSt.</div>
-        </label>
+        <div style="grid-column:1/-1;text-align:center;color:var(--tx2);font-size:13px;padding:20px">
+          ⏳ Finanzierungsoptionen werden geladen…
+        </div>
       </div>
 
       <!-- Refinanzierer (nur bei Miete/Leasing) -->
@@ -334,15 +308,11 @@ app.get('/angebot', async (c) => {
     </div>
 
     <!-- Servicevertrag -->
-    <div class="card">
+    <div class="card" id="sv-card">
       <h2>Servicevertrag</h2>
-      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
-        <input type="checkbox" id="service-included" style="margin-top:3px;width:18px;height:18px;accent-color:var(--ac)">
-        <div>
-          <div style="font-weight:600;margin-bottom:3px">Servicevertrag einschließen</div>
-          <div style="font-size:13px;color:var(--tx2)">Umfasst Wartung, Support und Betrieb gemäß Angebot. Laufzeit entspricht der gewählten Finanzierungsart.</div>
-        </div>
-      </label>
+      <div id="sv-content">
+        <div style="color:var(--tx2);font-size:13px">⏳ Wird geladen…</div>
+      </div>
     </div>
 
     <!-- Digitale Unterschrift -->
@@ -389,7 +359,92 @@ app.get('/angebot', async (c) => {
   })}
 
   // Euros formatieren
-  function fEu(n){return n?new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(n):'–'}
+  function fEu(n){if(!n&&n!==0)return'–';return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(n)}
+
+  // Finanzdaten laden und UI aufbauen
+  let _fin = null
+  async function loadFinancials() {
+    const res = await fetch('/api/offer/financials?sid='+SID)
+    _fin = await res.json()
+
+    const opts = document.getElementById('fin-options')
+    const types = _fin.financingTypes || ['kauf','miete','leasing']
+    const monate = _fin.contractMonths || 36
+    const billing = _fin.billingCycle ? ` · ${_fin.billingCycle}` : ''
+
+    // Rate für Leasing: 92% der Miete wenn nicht separat im PDF
+    const leasingRate = _fin.monthlyRate ? _fin.monthlyRate * 0.92 : 0
+
+    const cards = {
+      kauf: `<label class="fin-card" id="card-kauf">
+        <input type="radio" name="fin_type" value="kauf" onchange="selectFin('kauf')">
+        <div class="fin-title">💳 Kauf</div>
+        <div class="fin-sub">Einmalige Zahlung</div>
+        <div class="fin-price">${_fin.totalValue ? fEu(_fin.totalValue) : '– auf Anfrage –'}</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:4px">Netto zzgl. MwSt.</div>
+      </label>`,
+      miete: `<label class="fin-card" id="card-miete">
+        <input type="radio" name="fin_type" value="miete" onchange="selectFin('miete')">
+        <div class="fin-title">📅 Miete</div>
+        <div class="fin-sub">${monate} Monate Laufzeit${billing}</div>
+        <div class="fin-price">${_fin.monthlyRate ? fEu(_fin.monthlyRate)+'/Monat' : '– auf Anfrage –'}</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:4px">Netto zzgl. MwSt.</div>
+      </label>`,
+      leasing: `<label class="fin-card" id="card-leasing">
+        <input type="radio" name="fin_type" value="leasing" onchange="selectFin('leasing')">
+        <div class="fin-title">🔑 Leasing</div>
+        <div class="fin-sub">${monate} Monate Laufzeit</div>
+        <div class="fin-price">${leasingRate ? fEu(leasingRate)+'/Monat' : '– auf Anfrage –'}</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:4px">Netto zzgl. MwSt.</div>
+      </label>`,
+    }
+
+    opts.innerHTML = types.map(t => cards[t] || '').join('')
+
+    // Servicevertrag rendern
+    renderServicevertrag(_fin.hasServiceContract, monate)
+  }
+
+  function renderServicevertrag(hasInOffer, monate) {
+    const el = document.getElementById('sv-content')
+    if (!el) return
+
+    if (hasInOffer) {
+      // Servicevertrag ist im Angebot enthalten
+      el.innerHTML = `
+        <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px">
+          ✅ <strong>Servicevertrag im Angebot enthalten</strong><br>
+          <span style="color:var(--tx2)">Umfasst Wartung, Support und Betrieb gemäß Angebot. Laufzeit: ${monate} Monate.</span>
+        </div>
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+          <input type="checkbox" id="service-included" checked style="margin-top:3px;width:18px;height:18px;accent-color:var(--ac)">
+          <div>
+            <div style="font-weight:600;margin-bottom:3px">Servicevertrag einschließen</div>
+            <div style="font-size:13px;color:var(--tx2)">Ist Bestandteil des Angebots und wird mit beauftragt.</div>
+          </div>
+        </label>`
+    } else {
+      // Kein Servicevertrag im Angebot
+      el.innerHTML = `
+        <div style="background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;color:var(--tx2)">Servicevertrag</span>
+            <span style="font-weight:700;color:var(--tx3)">–,– €</span>
+          </div>
+          <div style="font-size:12px;color:var(--tx3);margin-top:4px">Kein Servicevertrag im Angebot enthalten</div>
+        </div>
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:14px;background:rgba(0,194,255,.04);border:1.5px dashed var(--ac);border-radius:10px">
+          <input type="checkbox" id="service-included" style="margin-top:3px;width:18px;height:18px;accent-color:var(--ac);flex-shrink:0">
+          <div>
+            <div style="font-weight:600;margin-bottom:3px;color:var(--tx)">Servicevertrag hinzufügen?</div>
+            <div style="font-size:13px;color:var(--tx2)">
+              Setzen Sie diesen Haken, wenn Sie Interesse an einem Servicevertrag haben. 
+              Ihr zuständiger von Busch Mitarbeiter meldet sich bei Ihnen mit einem passenden Angebot.
+            </div>
+          </div>
+        </label>`
+    }
+  }
 
   // Tabs
   function showTab(id, btn){
@@ -428,6 +483,9 @@ app.get('/angebot', async (c) => {
   }
   resizeCanvas()
   window.addEventListener('resize', resizeCanvas)
+
+  // Finanzdaten laden
+  loadFinancials()
 
   function getPos(e){
     const rect = canvas.getBoundingClientRect()
@@ -475,8 +533,12 @@ app.get('/angebot', async (c) => {
           session_id: SID,
           financing_type: finType,
           financing_partner: refinanzierer||'vonBusch',
-          service_included: document.getElementById('service-included').checked?1:0,
+          service_included: document.getElementById('service-included')?.checked?1:0,
+          service_interest: !(_fin?.hasServiceContract) && document.getElementById('service-included')?.checked?1:0,
           signature_png: sigDataUrl,
+          monthly_rate: _fin?.monthlyRate || null,
+          total_value: _fin?.totalValue || null,
+          contract_months: _fin?.contractMonths || null,
         })
       })
       const data = await res.json()
@@ -498,18 +560,119 @@ app.get('/angebot', async (c) => {
   `)
 })
 
-// Hilfsfunktion: Zahlen aus Summary-Text extrahieren
+// ── FINANZIERUNGS-EXTRAKTION ──────────────────────────────────────────────────
+
+function parseDE(s: string): number {
+  // Deutsche Zahlen: 4.314,69 → 4314.69
+  return parseFloat(s.replace(/\./g, '').replace(',', '.'))
+}
+
+function extractFinancials(text: string): {
+  monthlyRate: number|null, totalValue: number|null,
+  contractMonths: number|null, oneTimeCosts: number|null,
+  hasServiceContract: boolean, billingCycle: string|null,
+  financingTypes: string[]
+} {
+  const t = text
+
+  // ── Monatliche Rate (Miete) ────────────────────────────────────────────────
+  // Muster: "84 Monate  4.314,69 €" oder "Preis/Monat\n  4.314,69 €"
+  let monthlyRate: number|null = null
+  const ratePatterns = [
+    /Preis\/Monat[\s\n]+(\d[\d.,]+)\s*€/i,
+    /Miete[\s\S]{0,60}?([\d]{1,3}(?:\.[\d]{3})*,[\d]{2})\s*€\/Monat/i,
+    /(\d{2,3})\s+Monate[\s\n\r]+(\d[\d.]+,\d{2})\s*€/i,
+    /(\d[\d.]+,\d{2})\s*€\/Monat/i,
+    /(\d[\d.]+,\d{2})\s*€\s*\/\s*Monat/i,
+  ]
+  for (const re of ratePatterns) {
+    const m = t.match(re)
+    if (m) {
+      // Nimm letzten Match (meist die Zahl)
+      const val = parseDE(m[m.length-1])
+      if (val > 0) { monthlyRate = val; break }
+    }
+  }
+
+  // ── Laufzeit ───────────────────────────────────────────────────────────────
+  let contractMonths: number|null = null
+  const lzMatch = t.match(/Laufzeit[\s\S]{0,30}?(\d{2,3})\s*Monate/i)
+    || t.match(/(\d{2,3})\s+Monate/i)
+  if (lzMatch) contractMonths = parseInt(lzMatch[1])
+
+  // ── Kaufpreis / Gesamtwert ─────────────────────────────────────────────────
+  let totalValue: number|null = null
+  let oneTimeCosts: number|null = null
+  const kaufPatterns = [
+    /Kauf[\s\S]{0,100}?(\d[\d.]+,\d{2})\s*€/i,
+    /Gesamtpreis[\s\S]{0,30}?(\d[\d.]+,\d{2})\s*€/i,
+    /Nettobetrag[\s\S]{0,30}?(\d[\d.]+,\d{2})\s*€/i,
+    /Summe[\s\S]{0,30}?(\d[\d.]+,\d{2})\s*€/i,
+  ]
+  for (const re of kaufPatterns) {
+    const m = t.match(re)
+    if (m) { const v = parseDE(m[1]); if (v > 0) { totalValue = v; oneTimeCosts = v; break } }
+  }
+
+  // ── Finanzierungsarten aus Text ────────────────────────────────────────────
+  const financingTypes: string[] = []
+  if (/\bKauf\b/i.test(t)) financingTypes.push('kauf')
+  if (/\bMiete\b/i.test(t)) financingTypes.push('miete')
+  if (/\bLeasing\b/i.test(t)) financingTypes.push('leasing')
+  if (!financingTypes.length) financingTypes.push('kauf', 'miete', 'leasing')
+
+  // ── Servicevertrag ─────────────────────────────────────────────────────────
+  const hasServiceContract = /Servicevertrag|Service-Vertrag|SLA|Wartungsvertrag/i.test(t)
+    && !/kein Servicevertrag/i.test(t)
+
+  // ── Abrechnungsturnus ──────────────────────────────────────────────────────
+  let billingCycle: string|null = null
+  const bcMatch = t.match(/Pauschalturnus[\s\S]{0,20}?(\w+)/i)
+    || t.match(/Abrechnungsturnus[\s\S]{0,30}?(monatlich|vierteljährlich|halbjährlich|jährlich)/i)
+  if (bcMatch) billingCycle = bcMatch[1]
+
+  return { monthlyRate, totalValue, contractMonths, oneTimeCosts, hasServiceContract, billingCycle, financingTypes }
+}
+
+// Hilfsfunktion: Einzelne Zahl extrahieren (Rückwärtskompatibilität)
 function extractNumber(text: string, pattern: string): number | null {
   const re = new RegExp(`(${pattern})[^\\d]*(\\d[\\d.,]*)`, 'i')
   const m = text.match(re)
   if (!m) return null
-  return parseFloat(m[2].replace(/\./g,'').replace(',','.'))
+  return parseDE(m[2])
 }
 
 function fEu(n: number): string {
   if (!n) return '0,00 €'
   return new Intl.NumberFormat('de-DE', { style:'currency', currency:'EUR' }).format(n)
 }
+
+// ── FINANCIALS ENDPOINT ──────────────────────────────────────────────────────
+
+app.get('/api/offer/financials', async (c) => {
+  const sid = c.req.query('sid') || ''
+  const s = await c.env.SOSS_DB.prepare(
+    `SELECT * FROM soss_sessions WHERE id=? AND expires_at>?`
+  ).bind(sid, nowIso()).first() as any
+  if (!s) return c.json({ error: 'Ungültige Sitzung' }, 401)
+
+  const doc = await c.env.CRM_DB.prepare(
+    `SELECT r2_key, r2_key_text, subject, summary FROM documents WHERE id=?`
+  ).bind(s.document_id).first() as any
+  if (!doc) return c.json({ error: 'Dokument nicht gefunden' }, 404)
+
+  // Volltext aus R2 lesen für bessere Extraktion
+  let fullText = doc.summary || ''
+  if (doc.r2_key_text) {
+    try {
+      const txtObj = await c.env.STORAGE.get(doc.r2_key_text)
+      if (txtObj) fullText = await txtObj.text()
+    } catch (e) { /* fallback auf summary */ }
+  }
+
+  const fin = extractFinancials(fullText)
+  return c.json({ ...fin, subject: doc.subject, summary: doc.summary })
+})
 
 // ── PDF PROXY ─────────────────────────────────────────────────────────────────
 
@@ -568,10 +731,11 @@ app.post('/api/order', async (c) => {
   // Angebotsdaten laden
   const doc = await c.env.CRM_DB.prepare(`SELECT * FROM documents WHERE id=?`).bind(s.document_id).first() as any
 
-  // Finanzierungswerte aus Dokument
-  const monthlyRate    = doc?.summary ? extractNumber(doc.summary, 'monatlich|rate|mtl') : null
-  const totalValue     = doc?.summary ? extractNumber(doc.summary, 'gesamt|summe|netto') : null
-  const contractMonths = doc?.summary ? extractNumber(doc.summary, 'laufzeit|monate') : null
+  // Finanzierungswerte: aus Body (Frontend hat schon aus R2-Text extrahiert) oder als Fallback aus Dokument
+  const fin = extractFinancials(doc?.summary || '')
+  const monthlyRate    = bodyRate    ?? fin.monthlyRate
+  const totalValue     = bodyValue   ?? fin.totalValue
+  const contractMonths = bodyMonths  ?? fin.contractMonths
 
   // Signatur als PNG in Archiv speichern
   let sigKey: string | null = null
@@ -594,8 +758,8 @@ app.post('/api/order', async (c) => {
   await c.env.SOSS_DB.prepare(`
     INSERT INTO soss_orders (id,session_id,company_id,document_id,erp_id,offer_number,
       contact_name,contact_email,financing_type,financing_partner,monthly_rate,total_value,
-      contract_months,service_included,signature_r2_key,signed_at,ip_address,status,created_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',?)
+      contract_months,service_included,service_interest,signature_r2_key,signed_at,ip_address,status,created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',?)
   `).bind(
     orderId, session_id, s.company_id, s.document_id, s.erp_id, s.offer_number,
     co ? `${co.first_name||''} ${co.last_name||''}`.trim() : null,
@@ -603,6 +767,7 @@ app.post('/api/order', async (c) => {
     financing_type, financing_partner || 'vonBusch',
     monthlyRate, totalValue, contractMonths,
     service_included ? 1 : 0,
+    service_interest ? 1 : 0,
     sigKey, now,
     c.req.header('CF-Connecting-IP') || null,
     now
@@ -622,7 +787,7 @@ app.post('/api/order', async (c) => {
     `Finanzierung: ${finLabel[financing_type]||financing_type} via ${financing_partner||'vonBusch'}`,
     monthlyRate ? `Monatliche Rate: ${fEu(monthlyRate)}` : '',
     totalValue  ? `Gesamtwert: ${fEu(totalValue)}` : '',
-    `Servicevertrag: ${service_included?'Ja':'Nein'}`,
+    `Servicevertrag: ${service_included?'Im Angebot enthalten – wird beauftragt':service_interest?'⚡ Interesse geäußert – bitte Angebot erstellen':'Nein'}`,
     sigKey ? `Unterschrift archiviert: ${sigKey}` : '',
   ].filter(Boolean).join('\n')
 
