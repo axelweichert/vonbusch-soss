@@ -1,0 +1,32 @@
+name = "vonbusch-soss"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# SoSS eigene Datenbank
+[[d1_databases]]
+binding = "SOSS_DB"
+database_name = "vonbusch-soss"
+database_id = "20c8ca7a-80ae-4df6-88eb-41c14ca6ebd2"
+
+# CRM Datenbank (read für Firmen, Dokumente, Deals)
+[[d1_databases]]
+binding = "CRM_DB"
+database_name = "vonbusch-crm"
+database_id = "da1d7413-7552-41c2-986d-e1ab43de972d"
+
+# CRM Dokumente-Bucket (read für Angebots-PDFs)
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "vonbusch-crm-docs"
+
+# Revisionssicheres Archiv (write für signierte Aufträge)
+[[r2_buckets]]
+binding = "ARCHIVE"
+bucket_name = "vonbusch-crm-archiv"
+
+[vars]
+APP_URL = "https://soss.vonbusch.app"
+CRM_URL = "https://crm.vonbusch.app"
+MAIL_FROM = "noreply@vonbusch.app"
+MAIL_FROM_NAME = "von Busch GmbH"

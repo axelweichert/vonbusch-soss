@@ -1,0 +1,17 @@
+{
+  "name": "vonbusch-soss",
+  "version": "1.0.0",
+  "description": "vonBusch Sales Offer Self Service",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^3.99.0"
+  }
+}
