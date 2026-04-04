@@ -1,3 +1,14 @@
+## v1.0.9 - 2026-04-04
+### Verbessert: Finanzierungsoptionen
+- Miete + Leasing zu einer Karte "Finanzierung" zusammengefasst
+- Laufzeit aus dem Angebot (z.B. 84 Monate) direkt in der Karte
+- Kauf-Karte nur anzeigen wenn Kaufpreis im Angebot vorhanden
+- Finanzierungs-Karte nur anzeigen wenn Rate im Angebot vorhanden
+- Kein "auf Anfrage" mehr - fehlende Werte = Karte wird nicht angezeigt
+- Fallback-Text wenn gar keine Werte extrahiert werden konnten
+
+---
+
 ## v1.0.8 - 2026-04-04
 ### Behoben
 - Refinanzierer: Kein Kundenwahl mehr - wird intern von von Busch festgelegt

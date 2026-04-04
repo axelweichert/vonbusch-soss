@@ -167,7 +167,7 @@ h3{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transf
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);padding:20px 0">
-      <span style="color:var(--tx3)">v1.0.8</span>
+      <span style="color:var(--tx3)">v1.0.9</span>
       <span>von Busch GmbH &middot; <a href="https://vonbusch.digital" style="color:var(--ac)">vonbusch.digital</a> &middot; <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a></span>
     </div>
   </div>
@@ -189,7 +189,7 @@ h3{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx2);text-transf
         Bei Fragen: <a href="mailto:vertrieb@vonbusch.digital" style="color:var(--ac)">vertrieb@vonbusch.digital</a>
       </p>
       <div style="display:flex;justify-content:space-between;margin-top:24px;font-size:12px;color:var(--tx3)">
-        <span>v1.0.8</span>
+        <span>v1.0.9</span>
         <a href="/" style="color:var(--ac)">Zur&uuml;ck zur Startseite</a>
       </div>
     </div>
@@ -315,57 +315,45 @@ async function loadFinancials() {
 function renderFinOptions() {
   var opts = document.getElementById('fin-options');
   opts.innerHTML = '';
-  var types = (_fin && _fin.financingTypes) ? _fin.financingTypes : ['kauf','miete','leasing'];
-  var monate = (_fin && _fin.contractMonths) ? _fin.contractMonths : 36;
-  var billing = (_fin && _fin.billingCycle) ? ' - ' + _fin.billingCycle : '';
-  var leasingRate = (_fin && _fin.monthlyRate) ? _fin.monthlyRate : 0;
+  var monate = (_fin && _fin.contractMonths) ? _fin.contractMonths : null;
+  var billing = (_fin && _fin.billingCycle) ? _fin.billingCycle : '';
 
-  var defs = {
-    kauf: {
-      icon: '\uD83D\uDCB3', label: 'Kauf', sub: 'Einmalige Zahlung',
-      price: (_fin && _fin.totalValue) ? fEu(_fin.totalValue) : '&#8211; auf Anfrage &#8211;'
-    },
-    miete: {
-      icon: '\uD83D\uDCC5', label: 'Miete',
-      sub: monate + ' Monate Laufzeit' + billing,
-      price: (_fin && _fin.monthlyRate) ? fEu(_fin.monthlyRate) + '/Monat' : '&#8211; auf Anfrage &#8211;'
-    },
-    leasing: {
-      icon: '\uD83D\uDD11', label: 'Leasing',
-      sub: monate + ' Monate Laufzeit' + billing,
-      price: leasingRate ? fEu(leasingRate) + '/Monat' : '&#8211; auf Anfrage &#8211;'
-    }
-  };
+  // Kauf-Karte: nur anzeigen wenn Kaufpreis im Angebot vorhanden
+  if (_fin && _fin.totalValue) {
+    opts.appendChild(makeFinCard('kauf', 'Kauf', 'Einmalige Zahlung', fEu(_fin.totalValue), 'Netto zzgl. MwSt.'));
+  }
 
-  types.forEach(function(type) {
-    var d = defs[type];
-    if (!d) return;
-    var lbl = document.createElement('label');
-    lbl.className = 'fin-card';
-    lbl.id = 'card-' + type;
-    var inp = document.createElement('input');
-    inp.type = 'radio'; inp.name = 'fin_type'; inp.value = type;
-    inp.addEventListener('change', function() { selectFin(type); });
-    lbl.appendChild(inp);
-    var title = document.createElement('div');
-    title.className = 'fin-title';
-    title.textContent = d.icon + ' ' + d.label;
-    lbl.appendChild(title);
-    var sub = document.createElement('div');
-    sub.className = 'fin-sub';
-    sub.textContent = d.sub;
-    lbl.appendChild(sub);
-    var price = document.createElement('div');
-    price.className = 'fin-price';
-    price.innerHTML = d.price;
-    lbl.appendChild(price);
-    var note = document.createElement('div');
-    note.style.cssText = 'font-size:12px;color:var(--tx2);margin-top:4px';
-    note.textContent = 'Netto zzgl. MwSt.';
-    lbl.appendChild(note);
-    opts.appendChild(lbl);
-  });
+  // Finanzierung (Miete/Leasing zusammengefasst): nur anzeigen wenn Rate vorhanden
+  if (_fin && _fin.monthlyRate) {
+    var sub = monate ? (monate + ' Monate Laufzeit') : 'Monatliche Rate';
+    if (billing) sub += ' · ' + billing;
+    opts.appendChild(makeFinCard('finanzierung', 'Finanzierung', sub, fEu(_fin.monthlyRate) + '/Monat', 'Netto zzgl. MwSt.'));
+  }
+
+  // Fallback: wenn gar nichts extrahiert wurde
+  if (!opts.children.length) {
+    var msg = document.createElement('div');
+    msg.style.cssText = 'color:var(--tx2);font-size:13px;padding:16px';
+    msg.textContent = 'Die Finanzierungsoptionen werden aus Ihrem Angebot geladen. Bei Fragen wenden Sie sich an Ihren Ansprechpartner.';
+    opts.appendChild(msg);
+  }
 }
+
+function makeFinCard(type, title, sub, price, note) {
+  var lbl = document.createElement('label');
+  lbl.className = 'fin-card';
+  lbl.id = 'card-' + type;
+  var inp = document.createElement('input');
+  inp.type = 'radio'; inp.name = 'fin_type'; inp.value = type;
+  inp.addEventListener('change', function() { selectFin(type); });
+  lbl.appendChild(inp);
+  var t = document.createElement('div'); t.className = 'fin-title'; t.textContent = title; lbl.appendChild(t);
+  var s = document.createElement('div'); s.className = 'fin-sub'; s.textContent = sub; lbl.appendChild(s);
+  var p = document.createElement('div'); p.className = 'fin-price'; p.textContent = price; lbl.appendChild(p);
+  var n = document.createElement('div'); n.style.cssText = 'font-size:12px;color:var(--tx2);margin-top:4px'; n.textContent = note; lbl.appendChild(n);
+  return lbl;
+}
+
 
 function renderServicevertrag() {
   var el = document.getElementById('sv-content');
@@ -399,8 +387,9 @@ function selectFin(type) {
   var card = document.getElementById('card-' + type);
   if (card) card.classList.add('selected');
   var ref = document.getElementById('ref-section');
-  if (ref) ref.style.display = (type === 'miete' || type === 'leasing') ? 'block' : 'none';
+  if (ref) ref.style.display = (type === 'finanzierung') ? 'block' : 'none';
 }
+
 
 
 
@@ -470,8 +459,7 @@ async function submitOrder() {
   if (!finType) { alert('Bitte w\u00e4hlen Sie eine Finanzierungsart.'); return; }
   finType = finType.value;
 
-  var needsRef = finType === 'miete' || finType === 'leasing';
-  // Refinanzierer wird intern von von Busch festgelegt - keine Kundenwahl
+  var needsRef = finType === 'finanzierung'; // Refinanzierer intern
 
   if (!hasSig) { alert('Bitte unterschreiben Sie das Angebot.'); return; }
 
