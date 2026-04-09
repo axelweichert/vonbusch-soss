@@ -1,3 +1,8 @@
+## v1.2.0 - 2026-04-09
+### Fix: wrangler.toml assets-Binding
+- Fix: assets = { directory = public } muss vor [placement] stehen (TOML-Reihenfolge)
+- Nach [placement] wird alles als placement.assets interpretiert → Worker sah keine statischen Dateien → Internal Server Error
+
 ## v1.1.9 - 2026-04-09
 ### Smart Placement aktiviert
 - wrangler.toml: [placement] mode = smart

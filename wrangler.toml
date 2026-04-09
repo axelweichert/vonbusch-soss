@@ -2,11 +2,11 @@ name = "vonbusch-soss"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+assets = { directory = "public", binding = "ASSETS" }
 
 [placement]
 mode = "smart"
 
-assets = { directory = "public", binding = "ASSETS" }
 
 [[d1_databases]]
 binding = "SOSS_DB"
