@@ -1,3 +1,7 @@
+## v1.1.8 - 2026-04-09
+### Observability aktiviert
+- wrangler.toml: [observability] logs (enabled + invocation_logs) + traces enabled
+
 ## v1.1.7 - 2026-04-04
 ### Neu: PDF-Fallback fuer Testkunden
 - Wenn Angebots-PDF nicht in R2 vorhanden, wird automatisch das Demo-PDF gezeigt

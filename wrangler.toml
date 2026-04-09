@@ -26,3 +26,12 @@ bucket_name = "vonbusch-crm-archiv"
 APP_URL = "https://soss.vonbusch.app"
 MAIL_FROM = "noreply@vonbusch.app"
 MAIL_FROM_NAME = "von Busch GmbH"
+
+[observability]
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
