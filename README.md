@@ -1,3 +1,7 @@
+## v1.1.9 - 2026-04-09
+### Smart Placement aktiviert
+- wrangler.toml: [placement] mode = smart
+
 ## v1.1.8 - 2026-04-09
 ### Observability aktiviert
 - wrangler.toml: [observability] logs (enabled + invocation_logs) + traces enabled
