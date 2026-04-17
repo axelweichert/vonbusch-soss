@@ -1,4 +1,4 @@
-name = "vonbusch-soss"
+name = "vonbusch-soss-eu"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
@@ -10,13 +10,13 @@ mode = "smart"
 
 [[d1_databases]]
 binding = "SOSS_DB"
-database_name = "vonbusch-soss"
-database_id = "20c8ca7a-80ae-4df6-88eb-41c14ca6ebd2"
+database_name = "vonbusch-soss-eu"
+database_id = "e86df9d3-90c7-4fdf-b232-687c70a59f16"
 
 [[d1_databases]]
 binding = "CRM_DB"
-database_name = "vonbusch-crm"
-database_id = "da1d7413-7552-41c2-986d-e1ab43de972d"
+database_name = "vonbusch-crm-eu"
+database_id = "d44390a9-4f6e-4ecc-9193-e8385e98e412"
 
 [[r2_buckets]]
 binding = "STORAGE"
