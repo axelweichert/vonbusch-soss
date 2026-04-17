@@ -20,11 +20,11 @@ database_id = "d44390a9-4f6e-4ecc-9193-e8385e98e412"
 
 [[r2_buckets]]
 binding = "STORAGE"
-bucket_name = "vonbusch-crm-docs"
+bucket_name = "vonbusch-crm-docs-eu"
 
 [[r2_buckets]]
 binding = "ARCHIVE"
-bucket_name = "vonbusch-crm-archiv"
+bucket_name = "vonbusch-crm-archiv-eu"
 
 [vars]
 APP_URL = "https://soss.vonbusch.app"
