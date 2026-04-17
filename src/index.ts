@@ -511,4 +511,26 @@ app.get('/api/bestellung/:orderId', async (c) => {
 
 app.get('/health', (c) => c.json({ status: 'ok', service: 'vonbusch-soss', version: '1.0.7' }))
 
+// TEMP: Musterdaten anlegen
+app.post('/api/seed-testdata', async (c) => {
+  if (c.req.query('secret') !== 'vbmigrate2026eu') return c.json({ error: 'Unauthorized' }, 401)
+  const now = new Date().toISOString()
+  const companyId = 'test-company-80576'
+  const docId     = 'test-doc-131313'
+  try {
+    await c.env.CRM_DB.prepare(`
+      INSERT OR REPLACE INTO companies (id,name,status,erp_id,street,zip,city,country,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?)
+    `).bind(companyId,'von Busch Test GmbH','customer','80576','Eckendorfer Str. 125','33609','Bielefeld','DE',now,now).run()
+
+    await c.env.CRM_DB.prepare(`
+      INSERT OR REPLACE INTO documents (id,company_id,doc_type,subject,r2_key,r2_key_text,summary,tags,is_archived,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)
+    `).bind(docId,companyId,'Angebot','Angebot 131313 - Testangebot Musterdaten',null,null,'Musterdaten für SoSS-Test','[]',0,now,now).run()
+
+    return c.json({ ok: true, company_id: companyId, doc_id: docId })
+  } catch(e:any) { return c.json({ error: e?.message }, 500) }
+})
+// END TEMP
+
 export default app
