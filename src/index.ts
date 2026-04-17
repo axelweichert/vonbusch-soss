@@ -524,9 +524,17 @@ app.post('/api/seed-testdata', async (c) => {
     `).bind(companyId,'von Busch Test GmbH','customer','80576','Eckendorfer Str. 125','33609','Bielefeld','DE',now,now).run()
 
     await c.env.CRM_DB.prepare(`
-      INSERT OR REPLACE INTO documents (id,company_id,doc_type,subject,r2_key,r2_key_text,summary,tags,is_archived,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)
-    `).bind(docId,companyId,'Angebot','Angebot 131313 - Testangebot Musterdaten',null,null,'Musterdaten für SoSS-Test','[]',0,now,now).run()
+      INSERT OR REPLACE INTO documents
+        (id,company_id,doc_type,subject,r2_key,r2_key_text,name,original_name,summary,tags,is_archived,created_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    `).bind(
+      docId, companyId, 'Angebot',
+      'Angebot 131313 - Testangebot Musterdaten',
+      'test/soss-testdoc-131313.pdf', null,
+      'Angebot 131313 - Testangebot',
+      'Angebot_131313.pdf',
+      'Musterdaten für SoSS-Test', '[]', 0, now
+    ).run()
 
     return c.json({ ok: true, company_id: companyId, doc_id: docId })
   } catch(e:any) { return c.json({ error: e?.message }, 500) }
