@@ -1,3 +1,13 @@
+## v1.2.1 - 2026-04-20
+### Behoben: Login-Schaden nach EU-Migration
+- Fix 1: Tabelle `soss_sessions` fehlte in `vonbusch-soss-eu` (wurde bei EU-Migration nicht mit-migriert). Tabelle manuell nachgebaut, 10 Test-Sessions zurueckgespielt. Ohne diesen Fix war `INSERT INTO soss_sessions` im Login-Handler gegen eine nicht existente Tabelle gelaufen → jeder Login-Versuch schlug fehl.
+- Fix 2: Login-Query pruefte `d.is_archived=0`. Der CRM-Cron archiviert Dokumente automatisch nach 3 Tagen → Angebote waren fuer den SoSS-Login unauffindbar. `is_archived=0` entfernt. Doppelbestellungen verhindert weiterhin der `existing`-Check auf `soss_orders`.
+- Fix 3: wrangler.toml R2-Bindings ergaenzt um `jurisdiction = "eu"`. Ohne dieses Flag findet der Worker die EU-Buckets nicht. Naechster R2-Zugriff (Angebot-PDF, Bestellung) funktioniert damit.
+- Version einheitlich auf v1.2.1: src/index.ts /health, public/index.html (2 Stellen), package.json.
+- Kapitel 10: DB-ID auf neue EU-DB aktualisiert (`e86df9d3-90c7-4fdf-b232-687c70a59f16`).
+
+---
+
 ## v1.2.0 - 2026-04-09
 ### Fix: wrangler.toml assets-Binding
 - Fix: assets = { directory = public } muss vor [placement] stehen (TOML-Reihenfolge)
@@ -402,9 +412,11 @@ Keine zwingend erforderlichen Secrets — Mailchannels läuft ohne API-Key auf C
 
 ## 10. Infrastruktur & Datenbank
 
-### D1-Datenbank: vonbusch-soss
+### D1-Datenbank: vonbusch-soss-eu
 
-**ID:** `20c8ca7a-80ae-4df6-88eb-41c14ca6ebd2`
+**ID:** `e86df9d3-90c7-4fdf-b232-687c70a59f16`
+**Jurisdiction:** EU (DSGVO-konform)
+**Vorgaenger (historisch):** `vonbusch-soss` (ID `20c8ca7a-80ae-4df6-88eb-41c14ca6ebd2`) — nicht mehr aktiv, seit EU-Migration 2026-04-17.
 
 #### Tabellen
 

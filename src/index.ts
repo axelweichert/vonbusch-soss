@@ -112,7 +112,7 @@ app.post('/api/auth/login', async (c) => {
   ).bind(erpId).first() as any
   if (!co) return c.json({ error: 'notfound' }, 404)
   const doc = await c.env.CRM_DB.prepare(
-    "SELECT d.id, d.subject, d.r2_key, d.r2_key_text, d.summary, d.tags FROM documents d WHERE d.company_id=? AND d.doc_type='Angebot' AND d.is_archived=0 AND (d.subject LIKE ? OR d.subject LIKE ?) ORDER BY d.created_at DESC LIMIT 1"
+    "SELECT d.id, d.subject, d.r2_key, d.r2_key_text, d.summary, d.tags FROM documents d WHERE d.company_id=? AND d.doc_type='Angebot' AND (d.subject LIKE ? OR d.subject LIKE ?) ORDER BY d.created_at DESC LIMIT 1"
   ).bind(co.id, '%' + offerNr + '%', '%' + offerNr + '-%').first() as any
   if (!doc) return c.json({ error: 'notfound' }, 404)
   const existing = await c.env.SOSS_DB.prepare(
@@ -509,7 +509,7 @@ app.get('/api/bestellung/:orderId', async (c) => {
   })
 })
 
-app.get('/health', (c) => c.json({ status: 'ok', service: 'vonbusch-soss', version: '1.0.7' }))
+app.get('/health', (c) => c.json({ status: 'ok', service: 'vonbusch-soss', version: '1.2.1' }))
 
 
 
