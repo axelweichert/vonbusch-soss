@@ -72,13 +72,18 @@ nie im Repo gespeichert (siehe [configuration.md](./configuration.md)).
 - **Geteilte CRM-Datenbank:** SoSS schreibt direkt in `CRM_DB` (`deals`,
   `activities`, `documents`). Ein Fehler hier wirkt auf das CRM. Schreibpfade
   sind in `src/index.ts` (`POST /api/order`) gekapselt.
-- **Demo-PDF-Fallback:** `GET /api/offer/pdf` liefert für jede gültige Session
-  ohne eigenes Dokument im R2 ein **fest verdrahtetes R2-Objekt** aus
-  (`src/index.ts`, hartkodierter Fallback-Key). Ob dieses Objekt ausschließlich
-  synthetische Daten enthält, ist **nicht verifiziert** — bis zum Nachweis wird
-  hier keine Aussage über die Abwesenheit eines Datenlecks getroffen.
-  Verifikation und ggf. Härtung erfolgen unter
-  [OWL-69](/OWL/issues/OWL-69) (*Demo-PDF-Fallback — Cross-Tenant-Disclosure
-  verifizieren & härten*).
+- **PDF-Fallback entfernt (OWL-69):** `GET /api/offer/pdf` lieferte bei
+  fehlendem eigenem R2-Objekt früher ein fest verdrahtetes „Demo-PDF" aus. Die
+  Verifikation unter [OWL-69](/OWL/issues/OWL-69) ergab, dass dieses Objekt
+  **ein reales Kunden-Angebot eines Drittkunden** war — d.h. eine
+  Cross-Tenant Information Disclosure (OWASP A01 Broken Access Control). Der
+  Fallback wurde entfernt: fehlt das eigene Dokument, antwortet der Endpunkt
+  jetzt mit einem sauberen `404`. Frühere Doku-Behauptung („enthält keine
+  echten Kundendaten") war **falsch** und ist hiermit korrigiert.
+- **Session-ID nicht mehr in URL:** `/api/offer/pdf`, `/api/offer/financials`
+  und `/api/bestellung/:orderId` akzeptierten die Session-ID als
+  `?sid=`-Query-Parameter. Bei aktivem `invocation_logs` landete das
+  Session-Token damit in den Request-Logs. Die Endpunkte lesen die Session
+  jetzt ausschließlich aus dem `httpOnly`-Cookie (OWL-69).
 - Eine vertiefte Härtungs-/Ruleset-Bewertung sollte vom IT Security Consultant
   durchgeführt werden.

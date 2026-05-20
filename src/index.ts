@@ -91,6 +91,18 @@ async function getSessionFromCookie(c: any): Promise<any> {
   ).bind(sid, nowIso()).first()
 }
 
+// Session aus dem httpOnly-Cookie lesen (auch used=1 erlaubt: PDF/Bestellung
+// bleiben nach Auftragsabschluss abrufbar). Die Session-ID wird bewusst NICHT
+// als ?sid=-Query-Parameter akzeptiert, da sie sonst in den Cloudflare
+// Invocation-Logs landet (observability.logs.invocation_logs, wrangler.toml).
+async function getSessionByCookie(c: any): Promise<any> {
+  const sid = getCookie(c, 'soss_session')
+  if (!sid) return null
+  return await c.env.SOSS_DB.prepare(
+    'SELECT * FROM soss_sessions WHERE id=? AND expires_at>?'
+  ).bind(sid, nowIso()).first()
+}
+
 app.get('/', (c) => c.env.ASSETS.fetch(c.req.raw))
 app.get('/favicon.ico', (c) => new Response(null, { status: 204 }))
 
@@ -150,17 +162,14 @@ app.get('/api/auth/logout', (c) => {
 })
 
 app.get('/api/offer/pdf', async (c) => {
-  const sid = c.req.query('sid') || ''
-  const s = await c.env.SOSS_DB.prepare('SELECT * FROM soss_sessions WHERE id=? AND expires_at>?').bind(sid, nowIso()).first() as any
+  const s = await getSessionByCookie(c) as any
   if (!s) return c.json({ error: 'Ungueltige Sitzung' }, 401)
   const doc = await c.env.CRM_DB.prepare('SELECT r2_key, mime_type, original_name FROM documents WHERE id=?').bind(s.document_id).first() as any
   if (!doc) return c.json({ error: 'Nicht gefunden' }, 404)
-  let obj = await c.env.STORAGE.get(doc.r2_key)
-  // Fallback: Demo-PDF (Nielsen) wenn Datei nicht im R2 vorhanden (z.B. Testkunden)
-  if (!obj) {
-    const fallbackKey = 'docs/732fd7ac-696e-4a44-9972-b28d1c42396d/2025/12/c6a69bf7-6d25-4a13-8d5d-a63969aa7fd5.pdf'
-    if (doc.r2_key !== fallbackKey) obj = await c.env.STORAGE.get(fallbackKey)
-  }
+  // Kein Fremddokument-Fallback: fehlt das eigene R2-Objekt, sauberer 404.
+  // (Der frühere Fallback lieferte ein reales Drittkunden-Angebot aus →
+  //  Cross-Tenant Information Disclosure, OWL-69.)
+  const obj = await c.env.STORAGE.get(doc.r2_key)
   if (!obj) return c.json({ error: 'Datei nicht gefunden' }, 404)
   return new Response(obj.body as ReadableStream, {
     headers: { 'Content-Type': doc.mime_type || 'application/pdf', 'Content-Disposition': 'inline; filename="angebot.pdf"', 'Cache-Control': 'private, max-age=3600' }
@@ -168,8 +177,7 @@ app.get('/api/offer/pdf', async (c) => {
 })
 
 app.get('/api/offer/financials', async (c) => {
-  const sid = c.req.query('sid') || ''
-  const s = await c.env.SOSS_DB.prepare('SELECT * FROM soss_sessions WHERE id=? AND expires_at>?').bind(sid, nowIso()).first() as any
+  const s = await getSessionByCookie(c) as any
   if (!s) return c.json({ error: 'Ungueltige Sitzung' }, 401)
   const doc = await c.env.CRM_DB.prepare('SELECT r2_key_text, subject, summary, fulltext_idx, fin_data FROM documents WHERE id=?').bind(s.document_id).first() as any
   if (!doc) return c.json({ error: 'Nicht gefunden' }, 404)
@@ -463,7 +471,7 @@ app.post('/api/order', async (c) => {
     await c.env.SOSS_DB.prepare('UPDATE soss_orders SET crm_deal_id=?,crm_activity_id=? WHERE id=?').bind(dealId, akId, orderId).run()
   } catch (_) {}
   const bestellungUrl = bestellungKey
-    ? '/api/bestellung/' + orderId + '?sid=' + session_id
+    ? '/api/bestellung/' + orderId
     : null
   return c.json({ success: true, order_id: orderId, bestellung_url: bestellungUrl })
 })
@@ -471,27 +479,10 @@ app.post('/api/order', async (c) => {
 
 // ── BESTELLDOKUMENT ANZEIGEN ──────────────────────────────────────────────────
 app.get('/api/bestellung/:orderId', async (c) => {
-  // Session-Check: used=1 erlaubt (Session nach Bestellung verbraucht aber PDF noch abrufbar)
-  const sid = c.req.query('sid') || ''
-  let session: any = null
-  if (sid) {
-    // Direkter sid-Parameter: auch used=1 erlaubt, aber Ablauf prüfen
-    session = await c.env.SOSS_DB.prepare(
-      'SELECT * FROM soss_sessions WHERE id=? AND expires_at>?'
-    ).bind(sid, nowIso()).first() as any
-  }
-  if (!session) {
-    // Cookie-Fallback (auch used=1 erlaubt)
-    const cookieSid = require ? null : null  // Cookie-Header manuell lesen
-    const cookieHeader = c.req.header('Cookie') || ''
-    const cm = cookieHeader.match(/soss_session=([^;]+)/)
-    const cookieVal = cm ? cm[1] : ''
-    if (cookieVal) {
-      session = await c.env.SOSS_DB.prepare(
-        'SELECT * FROM soss_sessions WHERE id=? AND expires_at>?'
-      ).bind(cookieVal, nowIso()).first() as any
-    }
-  }
+  // Session-Check über httpOnly-Cookie (auch used=1 erlaubt: PDF nach
+  // Auftragsabschluss noch abrufbar). Kein ?sid=-Query-Parameter mehr —
+  // Token würde sonst in den Invocation-Logs landen (OWL-69).
+  const session = await getSessionByCookie(c) as any
   if (!session) return new Response('Nicht authentifiziert', { status: 401 })
 
   const order = await c.env.SOSS_DB.prepare('SELECT * FROM soss_orders WHERE id=? AND company_id=?').bind(c.req.param('orderId'), session.company_id).first() as any

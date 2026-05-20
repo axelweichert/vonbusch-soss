@@ -308,12 +308,12 @@ function fillAngebot(d) {
     tagsEl.appendChild(s);
   });
 
-  document.getElementById('pdf-frame').src = '/api/offer/pdf?sid=' + SID;
+  document.getElementById('pdf-frame').src = '/api/offer/pdf';
 }
 
 async function loadFinancials() {
   try {
-    var res = await fetch('/api/offer/financials?sid=' + SID);
+    var res = await fetch('/api/offer/financials');
     if (!res.ok) { throw new Error('HTTP ' + res.status); }
     _fin = await res.json();
     if (_fin.error) { throw new Error(_fin.error); }
