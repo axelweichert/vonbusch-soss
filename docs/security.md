@@ -29,6 +29,15 @@ Zielgruppe: Betreiber:innen, Reviewer, Compliance.
 ## Sessions
 
 - Cookie `soss_session`: `httpOnly`, `Secure`, `SameSite=Lax`, `maxAge` 48 h.
+- **Session-ID auch per URL-Query:** `GET /api/offer/pdf`,
+  `GET /api/offer/financials` und `GET /api/bestellung/:orderId` akzeptieren die
+  Session-ID zusätzlich als Query-Parameter `?sid=…` (siehe [api.md](./api.md)).
+  Eine per URL übergebene Session-ID ist **nicht** durch `httpOnly` geschützt:
+  Bei aktivem `observability.logs.invocation_logs` (`wrangler.toml`) landet die
+  vollständige Request-URL inkl. `?sid=` in den Cloudflare-Request-Logs;
+  zusätzlich kann sie über Referer-Header und Browser-History abfließen
+  (STRIDE: *Information Disclosure*). Die `httpOnly`-Eigenschaft gilt nur für den
+  Cookie-Transport, nicht für den `?sid=`-Pfad.
 - Server-seitige Gültigkeitsprüfung bei jedem Request (`expires_at > now`).
 - Einmal-Nutzung: nach Auftragsabschluss `used=1`; ein zweiter Auftrag zum
   selben Dokument wird zusätzlich über `soss_orders` blockiert.
@@ -63,8 +72,13 @@ nie im Repo gespeichert (siehe [configuration.md](./configuration.md)).
 - **Geteilte CRM-Datenbank:** SoSS schreibt direkt in `CRM_DB` (`deals`,
   `activities`, `documents`). Ein Fehler hier wirkt auf das CRM. Schreibpfade
   sind in `src/index.ts` (`POST /api/order`) gekapselt.
-- **Demo-PDF-Fallback:** `GET /api/offer/pdf` liefert bei fehlendem Objekt ein
-  Demo-PDF — bewusste Funktion für Testkunden, kein Datenleck (das Demo-PDF
-  enthält keine echten Kundendaten).
+- **Demo-PDF-Fallback:** `GET /api/offer/pdf` liefert für jede gültige Session
+  ohne eigenes Dokument im R2 ein **fest verdrahtetes R2-Objekt** aus
+  (`src/index.ts`, hartkodierter Fallback-Key). Ob dieses Objekt ausschließlich
+  synthetische Daten enthält, ist **nicht verifiziert** — bis zum Nachweis wird
+  hier keine Aussage über die Abwesenheit eines Datenlecks getroffen.
+  Verifikation und ggf. Härtung erfolgen unter
+  [OWL-69](/OWL/issues/OWL-69) (*Demo-PDF-Fallback — Cross-Tenant-Disclosure
+  verifizieren & härten*).
 - Eine vertiefte Härtungs-/Ruleset-Bewertung sollte vom IT Security Consultant
   durchgeführt werden.
